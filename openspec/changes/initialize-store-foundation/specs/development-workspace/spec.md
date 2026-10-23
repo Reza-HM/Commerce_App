@@ -47,14 +47,14 @@ The web application SHALL serve a minimal responsive foundation page with Englis
 - **AND** its document language, title, and main landmark are present
 
 ### Requirement: Executable quality gates
-The workspace SHALL provide root commands named `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, `test:smoke`, and `build`. Each command MUST exit nonzero on a relevant failure. Unit tests MUST run without an external database. Database integration and production-smoke tests MUST require an explicitly supplied dedicated TLS test database and fail clearly when prerequisites are absent.
+The workspace SHALL provide `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, `test:smoke`, and `build`, each returning nonzero on failure. Unit and process smoke tests MUST run without PostgreSQL. Optional live integration tests MUST require a dedicated TLS database and fail clearly if prerequisites are absent. Live execution is deferred by owner instruction and MUST be documented as unverified.
 
 #### Scenario: Invalid source fails validation
 - **WHEN** a type error or forbidden import is introduced
 - **THEN** the corresponding root check exits nonzero
 
 #### Scenario: Test service configuration is missing
-- **WHEN** database integration or production-smoke tests run without the dedicated TLS test database configuration
+- **WHEN** live database integration tests run without the dedicated TLS test database configuration
 - **THEN** they fail with a safe configuration error instead of reporting success or falling back to the development database
 
 ### Requirement: Foundation operating instructions

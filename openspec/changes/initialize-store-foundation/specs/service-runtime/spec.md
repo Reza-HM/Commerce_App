@@ -96,7 +96,7 @@ On a supported shutdown signal, the API SHALL stop accepting new application wor
 ### Requirement: Replica-independent operation
 The API SHALL start on independently configured ports without requiring sticky routing, local persistent files, or in-memory authoritative application state. Resource configuration MUST apply per process. Deployment documentation MUST distinguish this foundation property from proven production capacity.
 
-#### Scenario: Two API processes share one database
-- **WHEN** the guarded production-smoke runner starts two API processes on separate ports using the same dedicated certificate-verified TLS test database
-- **THEN** both can independently report liveness and readiness
+#### Scenario: Two API processes during a database outage
+- **WHEN** the production-smoke runner starts two API processes on separate ports with valid verified-TLS configuration pointing at a test-owned unavailable endpoint
+- **THEN** both independently report liveness 200 and readiness 503
 - **AND** restarting one does not prevent the other from serving its probes

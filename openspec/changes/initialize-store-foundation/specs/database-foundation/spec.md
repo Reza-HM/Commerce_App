@@ -23,7 +23,7 @@ The database configuration SHALL distinguish explicit local-development connecti
 
 #### Scenario: Deliberate local development transport
 - **WHEN** the API runs in development mode with explicitly selected local unencrypted transport
-- **THEN** it can connect to the configured development database without changing production or complete-acceptance security defaults
+- **THEN** it can connect to the configured development database without changing production security defaults
 
 #### Scenario: Certificate verification
 - **WHEN** a production-mode connection presents a trusted certificate matching the configured database hostname
@@ -64,7 +64,7 @@ The repository SHALL provide `db:generate` and `db:migrate` commands for reviewa
 - **AND** a migration failure returns a nonzero exit status
 
 ### Requirement: Transactional access
-The database foundation SHALL support multiple operations within one transaction and SHALL propagate failure rather than silently committing partial work. Transaction tests MUST use disposable technical fixtures in the dedicated test database, without adding production business models.
+The database foundation SHALL support multiple operations within one transaction and SHALL propagate failure rather than silently committing partial work. Live transaction tests MUST use disposable technical fixtures in the dedicated test database, without adding production business models. Driver-contract tests MUST verify commit/rollback and release without an external service.
 
 #### Scenario: Transaction rollback
 - **WHEN** a test transaction writes a fixture record and a later operation fails
@@ -83,17 +83,17 @@ Database integration tests SHALL require an explicit dedicated test connection a
 - **THEN** cleanup removes only that run's fixture objects
 - **AND** unrelated database objects remain unchanged
 
-### Requirement: Complete database acceptance environment
-Database integration and production-smoke tests SHALL require an explicitly supplied dedicated certificate-verified TLS test database. Their target guard MUST run before fixture writes or API child startup. Fault injection MUST be limited to test-owned connections/transports and MUST NOT stop shared services or alter global database settings.
+### Requirement: Deferred live database validation
+Live integration tests SHALL require a guarded dedicated TLS database and isolate faults to test-owned connections. Per owner instruction on 2026-10-23, live execution is deferred from completion. Driver-contract and outage process tests SHALL run locally; documentation MUST identify unverified live checks without weakening production TLS or representing simulation as database validation.
 
 #### Scenario: TLS test prerequisites are unavailable
-- **WHEN** a database integration or production-smoke command lacks a valid dedicated test connection or its required TLS trust configuration
+- **WHEN** the live database integration command lacks a valid dedicated test connection or its required TLS trust configuration
 - **THEN** the command fails with a safe prerequisite error instead of skipping checks, using the development database, or disabling verification
 
-#### Scenario: Guarded API child
-- **WHEN** a test runner starts a production-mode API process
-- **THEN** it first checks the test target against configured non-test targets
-- **AND** only after the guard succeeds does the child receive the test connection as its runtime database setting
+#### Scenario: Database-independent API smoke
+- **WHEN** the smoke runner starts production-mode API children without a live test database
+- **THEN** it supplies valid verified-TLS configuration for a test-owned unavailable endpoint
+- **AND** asserts live 200, ready 503, independent restart, and safe shutdown without writing to a database
 
 #### Scenario: Safe outage simulation
 - **WHEN** database outage/recovery tests run against a supplied test database

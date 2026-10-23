@@ -2,7 +2,10 @@
   "name": "commerce-app",
   "version": "0.0.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": ">=24.20.0 <25",
     "npm": "12.2.0"
@@ -16,13 +19,27 @@
     "dev:api": "node scripts/workspace.mjs dev:api",
     "dev:web": "npm run dev --workspace @commerce/web",
     "start:api": "npm run start --workspace @commerce/api",
-    "start:web": "npm run start --workspace @commerce/web"
+    "start:web": "npm run start --workspace @commerce/web",
+    "test:integration": "node scripts/workspace.mjs test:integration",
+    "test:e2e": "node scripts/workspace.mjs test:e2e",
+    "test:smoke": "node scripts/workspace.mjs test:smoke",
+    "db:generate": "npm exec --workspace @commerce/database -- drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "node scripts/workspace.mjs db:migrate"
   },
   "devEngines": {
-    "runtime": {"name": "node", "version": ">=24.20.0 <25", "onFail": "error"},
-    "packageManager": {"name": "npm", "version": "12.2.0", "onFail": "error"}
+    "runtime": {
+      "name": "node",
+      "version": ">=24.20.0 <25",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": "12.2.0",
+      "onFail": "error"
+    }
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/jest": "30.0.0",
     "@types/node": "24.10.1",
     "eslint": "10.13.0",
@@ -30,5 +47,10 @@
     "ts-jest": "29.4.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.0"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   }
 }

@@ -9,3 +9,6 @@ export type {
   Environment,
   RuntimeEnvironment
 } from './configuration';
+export {Database, poolOptions} from './database';
+export type {DatabaseEvent} from './database';
+export {guardedTestConfiguration} from './testing';

@@ -14,6 +14,11 @@ The repository SHALL document supported runtime and package-manager versions, co
 - **THEN** dependencies install from the committed lockfile without changing it
 - **AND** each application can build and start using repository commands
 
+#### Scenario: Clean build and type checking
+- **WHEN** the contributor runs root type checking and build from a clean install without previous compiled output
+- **THEN** required shared declarations and packages are built before their consumers
+- **AND** the compiled API starts using the database package's public entry point without source aliases or stale output
+
 ### Requirement: Enforced application boundaries
 The workspace SHALL reject imports from one application's internal source into another application and SHALL prevent the web application from importing the database package. Shared packages MUST NOT depend on application internals. Client bundles MUST NOT contain database access or server secrets.
 
@@ -22,8 +27,9 @@ The workspace SHALL reject imports from one application's internal source into a
 - **THEN** the boundary check fails with a diagnostic identifying the forbidden dependency
 
 #### Scenario: Client artifact inspection
-- **WHEN** the production web application is built with a unique test database credential configured only on the server
-- **THEN** browser-delivered assets and HTML contain neither that credential nor database access modules
+- **WHEN** synthetic non-public secret values are supplied to the web build and web server environment
+- **THEN** browser-delivered JavaScript, HTML, and server-component responses contain none of those values or database access modules
+- **AND** import-boundary validation remains required independently of the secret scan
 
 ### Requirement: Independent application startup
 The workspace SHALL provide separate development and production startup commands for the web and API processes. Rendering the foundation web page MUST NOT require a running API or database. The foundation MUST NOT require a queue, cache, storage service, or external identity provider.
@@ -41,14 +47,14 @@ The web application SHALL serve a minimal responsive foundation page with Englis
 - **AND** its document language, title, and main landmark are present
 
 ### Requirement: Executable quality gates
-The workspace SHALL provide root commands named `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, and `build`. Each command MUST exit nonzero on a relevant failure. Unit tests MUST run without an external database. Database integration tests MUST use an explicitly supplied dedicated test database and MUST fail clearly when it is absent.
+The workspace SHALL provide root commands named `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, `test:smoke`, and `build`. Each command MUST exit nonzero on a relevant failure. Unit tests MUST run without an external database. Database integration and production-smoke tests MUST require an explicitly supplied dedicated TLS test database and fail clearly when prerequisites are absent.
 
 #### Scenario: Invalid source fails validation
 - **WHEN** a type error or forbidden import is introduced
 - **THEN** the corresponding root check exits nonzero
 
 #### Scenario: Test service configuration is missing
-- **WHEN** database integration tests run without the dedicated test database configuration
+- **WHEN** database integration or production-smoke tests run without the dedicated TLS test database configuration
 - **THEN** they fail with a safe configuration error instead of reporting success or falling back to the development database
 
 ### Requirement: Foundation operating instructions

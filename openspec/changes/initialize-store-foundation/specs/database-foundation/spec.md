@@ -22,8 +22,34 @@ The database configuration SHALL distinguish explicit local-development connecti
 - **THEN** configuration validation fails before listening and reports the unsafe setting without its secret value
 
 #### Scenario: Deliberate local development transport
-- **WHEN** the API runs in development or test mode with explicitly selected local unencrypted transport
-- **THEN** it can connect to the configured development or dedicated test database without changing production security defaults
+- **WHEN** the API runs in development mode with explicitly selected local unencrypted transport
+- **THEN** it can connect to the configured development database without changing production or complete-acceptance security defaults
+
+#### Scenario: Certificate verification
+- **WHEN** a production-mode connection presents a trusted certificate matching the configured database hostname
+- **THEN** the connection succeeds
+- **AND** the same checks reject an untrusted CA or mismatched hostname without exposing credentials
+
+### Requirement: Authoritative TLS settings
+Runtime, migration, and test connections SHALL use validated explicit TLS settings. Connection URLs containing TLS-related query parameters MUST be rejected before connecting rather than overriding those settings. Diagnostics MUST name the conflicting setting without printing its value or connection URL.
+
+#### Scenario: Connection URL attempts a TLS override
+- **WHEN** any runtime, migration, or test URL includes a TLS-related query parameter such as `sslmode` or `sslrootcert`
+- **THEN** configuration validation fails before connecting
+- **AND** URL parsing cannot replace the validated certificate-verification policy
+
+### Requirement: Background connection failure recovery
+Transient background pool or idle-client errors SHALL be handled without crashing the API or logging raw connection details. Failed connections MUST be removed, and subsequent healthy connections MUST be usable. Probe-specific settings MUST NOT affect later users of a pooled connection.
+
+#### Scenario: Warmed pool loses idle connections
+- **WHEN** a test-owned transport failure interrupts idle connections in a previously healthy pool
+- **THEN** the API remains live and logs only a safe error classification
+- **AND** readiness can succeed after connectivity returns
+
+#### Scenario: Probe settings do not leak
+- **WHEN** a readiness check completes or times out
+- **THEN** its client is either returned with normal configured settings restored or discarded
+- **AND** later operations retain their configured statement deadline
 
 ### Requirement: Explicit migration execution
 The repository SHALL provide `db:generate` and `db:migrate` commands for reviewable versioned migrations. Application startup MUST NOT run migrations or synchronize schemas. Migration execution MUST require an explicitly configured migration connection. With no application migrations, `db:migrate` MUST report no pending work without creating business tables.
@@ -56,6 +82,23 @@ Database integration tests SHALL require an explicit dedicated test connection a
 - **WHEN** integration tests pass or fail normally
 - **THEN** cleanup removes only that run's fixture objects
 - **AND** unrelated database objects remain unchanged
+
+### Requirement: Complete database acceptance environment
+Database integration and production-smoke tests SHALL require an explicitly supplied dedicated certificate-verified TLS test database. Their target guard MUST run before fixture writes or API child startup. Fault injection MUST be limited to test-owned connections/transports and MUST NOT stop shared services or alter global database settings.
+
+#### Scenario: TLS test prerequisites are unavailable
+- **WHEN** a database integration or production-smoke command lacks a valid dedicated test connection or its required TLS trust configuration
+- **THEN** the command fails with a safe prerequisite error instead of skipping checks, using the development database, or disabling verification
+
+#### Scenario: Guarded API child
+- **WHEN** a test runner starts a production-mode API process
+- **THEN** it first checks the test target against configured non-test targets
+- **AND** only after the guard succeeds does the child receive the test connection as its runtime database setting
+
+#### Scenario: Safe outage simulation
+- **WHEN** database outage/recovery tests run against a supplied test database
+- **THEN** only transports or connections owned by that run are interrupted
+- **AND** TLS verification stays enabled and unrelated sessions/services are untouched
 
 ### Requirement: Connection budgeting guidance
 The repository SHALL document per-process connection limits, reserved database headroom, migration concurrency, and the multiplication of pools across API replicas and future workers. It MUST require a connection-budget review before increasing replica or worker counts and MUST NOT present a registered-user count as evidence of database capacity.

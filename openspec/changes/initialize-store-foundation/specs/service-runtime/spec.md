@@ -18,6 +18,10 @@ Each process SHALL validate its required configuration before serving requests. 
 - **WHEN** the API starts with valid configuration but cannot reach PostgreSQL
 - **THEN** liveness is available and readiness returns unavailable
 
+#### Scenario: Invalid configuration domain
+- **WHEN** an environment/TLS enum, URL protocol, port range, or resource limit is invalid
+- **THEN** startup fails before listening and names the setting without printing its value
+
 ### Requirement: Separate health probes
 The API SHALL expose `GET /health/live` and `GET /health/ready`. Liveness MUST return HTTP 200 while the HTTP process can serve requests, independently of database availability. Readiness MUST return HTTP 200 only when the database check succeeds and shutdown has not begun; otherwise it MUST return HTTP 503. Probe responses MUST use `Cache-Control: no-store` and disclose no infrastructure details.
 
@@ -34,23 +38,44 @@ Each readiness database check SHALL have a deadline of at most two seconds, incl
 - **THEN** it returns 503 by that deadline, allowing documented test timing tolerance
 - **AND** its canceled wait does not accumulate pending work after the response
 
-### Requirement: Safe HTTP boundary
-The API SHALL enforce a configured finite request-body limit, reject unapproved cross-origin access, and disable trust in forwarded client identity by default. Responses MUST include `X-Content-Type-Options: nosniff`; web pages MUST also set a referrer policy and disallow framing. Health and error responses MUST NOT disclose stack traces, environment values, or dependency connection details.
+### Requirement: Coalesced readiness work
+Concurrent readiness requests SHALL share at most one active database check per API process, without adding one acquisition per caller. A completed result MUST NOT be reused for later requests. Timeout cleanup MUST return pending database work to its pre-check baseline.
 
-#### Scenario: Oversized request
-- **WHEN** a request exceeds the configured body limit
-- **THEN** the API rejects it with HTTP 413 before application handling
+#### Scenario: Concurrent probes during an outage
+- **WHEN** multiple readiness requests overlap during a dependency failure
+- **THEN** only one database check is active and additional queued acquisitions are not created for those callers
+- **AND** after timeout cleanup a later request performs a fresh check and can observe recovery
+
+### Requirement: Safe HTTP boundary
+The API SHALL grant CORS response permissions only to configured exact origins and disable trust in forwarded client identity by default. Responses MUST include `X-Content-Type-Options: nosniff`; web pages MUST also set a referrer policy and disallow framing. Health and error responses MUST NOT disclose stack traces, environment values, or dependency connection details.
 
 #### Scenario: Unapproved browser origin
-- **WHEN** a request supplies an origin outside the configured exact allowlist
+- **WHEN** a request supplies an unapproved or malformed origin
 - **THEN** the response does not grant that origin browser access through CORS headers
+- **AND** withholding that permission is not treated as server-side authentication or guaranteed request rejection
 
 #### Scenario: Unexpected server failure
 - **WHEN** an unexpected internal error reaches the HTTP boundary
 - **THEN** the client receives a generic error and correlation identifier without internal exception or secret details
 
+### Requirement: Bounded HTTP input
+Requests carrying bodies SHALL support only `application/json`, with a configurable default 1 MiB limit. Malformed JSON MUST return 400, oversized JSON MUST return 413, and unsupported body media types MUST return 415. Header size and receive times MUST be finite, defaulting to 16 KiB headers, five seconds for headers, and ten seconds for the whole request.
+
+#### Scenario: Oversized declared or chunked JSON
+- **WHEN** a declared-length or chunked JSON body exceeds the configured limit
+- **THEN** the API returns 413 before route handling without logging the body
+
+#### Scenario: Malformed or unsupported body
+- **WHEN** a well-formed HTTP request carries malformed JSON or a body with an unsupported media type
+- **THEN** the API returns 400 or 415 respectively with a correlation identifier and safe completion log
+
+#### Scenario: Header or receive limit is exceeded
+- **WHEN** a request exceeds the configured header-size or receive-time limit
+- **THEN** it is rejected or terminated within that limit without exposing internal details
+- **AND** lower-level HTTP parser rejections are not required to have application correlation context
+
 ### Requirement: Correlated redacted operational logs
-The API SHALL generate a server-owned request identifier, include it in the response and related structured request logs, and log request completion status and duration. It MUST emit startup, dependency-failure, and shutdown events to standard output or error. Logs MUST exclude credentials, authorization/cookie values, connection URLs, request bodies, and raw sensitive query strings.
+For requests reaching application middleware, the API SHALL generate a server-owned identifier before body parsing, include it in responses and structured completion logs, and record status and duration. It MUST emit safe startup, dependency-failure, and shutdown events. Logs MUST exclude credentials, authorization/cookie values, connection URLs, request bodies, and raw sensitive query strings.
 
 #### Scenario: Request correlation and redaction
 - **WHEN** a request contains test secrets in authorization, cookie, query, and body fields and a caller-supplied request identifier
@@ -72,6 +97,6 @@ On a supported shutdown signal, the API SHALL stop accepting new application wor
 The API SHALL start on independently configured ports without requiring sticky routing, local persistent files, or in-memory authoritative application state. Resource configuration MUST apply per process. Deployment documentation MUST distinguish this foundation property from proven production capacity.
 
 #### Scenario: Two API processes share one database
-- **WHEN** two production API processes start on separate ports using the same development database
+- **WHEN** the guarded production-smoke runner starts two API processes on separate ports using the same dedicated certificate-verified TLS test database
 - **THEN** both can independently report liveness and readiness
 - **AND** restarting one does not prevent the other from serving its probes

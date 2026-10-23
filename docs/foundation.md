@@ -32,6 +32,11 @@ permits startup even when PostgreSQL is unavailable.
 
 ## Workspace and build contract
 
+Frontend styling uses Tailwind CSS utilities, with shared theme tokens in
+`apps/web/app/globals.css`. Use plain CSS only for requirements that utilities
+and theme configuration cannot express clearly; keep exceptions small, scoped,
+and explained. `AGENTS.md` and OpenSpec's context preserve this project convention.
+
 | Workspace | Ownership | Build |
 | --- | --- | --- |
 | `apps/web` | Next.js rendering and next-intl English resource | Framework-native modules |

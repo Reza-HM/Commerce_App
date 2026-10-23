@@ -1,8 +1,9 @@
-:root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; background: #f3f1eb; color: #172e29; }
-* { box-sizing: border-box; }
-body { margin: 0; }
-main { width: min(100%, 72rem); margin: 0 auto; padding: clamp(1.5rem, 6vw, 6rem); min-height: 100svh; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
-.eyebrow { font-size: .8rem; font-weight: 700; letter-spacing: .24em; margin-bottom: 4rem; }
-.status { border: 1px solid #afbeb2; border-radius: 2rem; padding: .5rem .8rem; font-size: .8rem; }
-h1 { font-size: clamp(2.4rem, 6vw, 5rem); line-height: 1.06; font-weight: 500; letter-spacing: -.05em; max-width: 13ch; margin: 1.8rem 0; overflow-wrap: anywhere; }
-.description { max-width: 35rem; font-size: 1.1rem; line-height: 1.7; color: #485e56; }
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --color-canvas: #f3f1eb;
+  --color-ink: #172e29;
+  --color-muted: #485e56;
+  --color-outline: #afbeb2;
+}

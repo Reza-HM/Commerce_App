@@ -8,5 +8,5 @@ export async function generateMetadata(): Promise<Metadata> {
   return {title:t('title'),description:t('description')};
 }
 export default function RootLayout({children}: Readonly<{children:ReactNode}>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en" className="bg-canvas font-sans leading-[normal] text-ink scheme-light"><body>{children}</body></html>;
 }

@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Arial, Helvetica, sans-serif;
+  --color-canvas: #f3f1eb;
+  --color-ink: #172e29;
+  --color-muted: #485e56;
+  --color-outline: #afbeb2;
+}

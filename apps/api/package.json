@@ -1,0 +1,24 @@
+{
+  "name": "@commerce/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "dev": "node --watch --enable-source-maps dist/main.js",
+    "start": "node --enable-source-maps dist/main.js"
+  },
+  "dependencies": {
+    "@commerce/database": "*",
+    "@nestjs/common": "12.2.0",
+    "@nestjs/core": "12.2.0",
+    "@nestjs/platform-express": "12.2.0",
+    "express": "5.3.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6"
+  }
+}

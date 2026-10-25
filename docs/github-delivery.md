@@ -1,0 +1,142 @@
+# GitHub delivery
+
+The delivery workflow has two operations: open a reviewed PR for an already
+published branch, then wait for checks and merge its explicitly authorized commit.
+The assistant can carry out both after one clear instruction covering the named
+push, displayed PR title/body, and exact merge head. Permission to open alone
+never permits merging. A new commit requires fresh merge authorization.
+
+## Prerequisites
+
+Use the Node/npm versions in `package.json`. Install GitHub CLI deliberately and
+authenticate as the repository owner using its browser/device login flow. Restart
+the terminal after installation if `gh` is not on PATH. Never paste a token into
+chat, a command, or a repository file. Existing SSH Git authentication is separate;
+the helpers do not run login, upload keys, configure Git, or push branches.
+
+For this repository the supported identity is `Reza-HM` on `github.com`, operating
+on `Reza-HM/Commerce_App`. Automated merging supports only that owner's own ready,
+same-repository PRs into `main`. Forks, bots, and other authors use a separately
+reviewed manual process. No self-approval or synthetic bot review is submitted.
+
+Before activation, approve and configure classic `main` protection: require PRs,
+successful `quality` and `database` checks from the GitHub Actions app, a current
+base, resolved conversations, administrator enforcement, and no force pushes or
+branch deletion. Required independent approvals are zero for this solo-owner
+workflow; explicit owner review/merge instruction remains required. Preserve any
+additional server requirements. Squash merging must be enabled, automatic branch
+deletion disabled, and merge queues/native deferred auto-merge unused. Helpers
+inspect settings and refuse unsupported or unverifiable enforcement.
+
+## Owner workflow
+
+1. Finish the change and its local validation. The assistant presents the commits,
+   target branch, and exact Conventional Commit PR title/description. CI pipeline
+   commits need approval of their concrete summary before committing.
+2. Explicitly authorize the desired actions. A complete instruction can say:
+   "Push this reviewed branch, open the PR with this title and description, and
+   squash-merge head `<full SHA>` once the required checks pass."
+3. Push normally with an explicit feature-branch refspec after authorization.
+   Save the reviewed PR description in an ignored UTF-8 `.local/` Markdown file.
+4. Run the opening helper with the reviewed head and metadata. It returns a new
+   or exactly matching existing PR URL; it never silently edits existing PR text.
+5. Run the merge helper only after explicit merge authorization. It waits in the
+   current session, checks the head/base and CI evidence, and requests an immediate
+   squash merge conditional on that head. It reports the confirmed merge commit.
+
+Commands work with the same syntax in PowerShell and a POSIX shell. Replace all
+placeholders; helpers reject missing arguments and shortened commit IDs:
+
+```text
+npm run pr:open -- --head <full-SHA> --title "feat(example): add reviewed change" --body-file .local/pr.md
+npm run pr:merge -- --pr <number> --head <full-SHA>
+```
+
+The default wait limit is 1,800 seconds, polling about every ten seconds. A shorter
+deadline can be selected with `--timeout-seconds <1-1800>`. Closing/interruption
+does not arm a future merge. Branches are retained after merging.
+
+## CI environment
+
+`quality` runs lint, typecheck, unit tests, production build, Chromium browser
+tests, API process smoke, and strict OpenSpec validation. `database` runs the
+existing serial live suite against its own fresh PostgreSQL 18 service. Both jobs
+run for all PR openings/updates/reopenings into `main`, including drafts, pushes
+to `main`, and manual dispatch. There are no path exclusions. Obsolete runs can
+be cancelled; cancellation is never passing evidence.
+
+Jobs use a supported Ubuntu host, pinned Node/npm and OpenSpec, immutable action
+references, clean lockfile installs, and only npm-download caching. CI has
+`contents: read`; checkout does not persist a credential. No privileged PR-target
+workflow, writer token, application secret, shared database, or developer `.env`
+is used.
+
+The PostgreSQL service uses trust authentication only within a disposable hosted
+job, publishes its port on `127.0.0.1`, and has no persistent host volume or private
+password. Its public CI-only role/database identifiers are not deployment
+configuration. The suite receives only `TEST_DATABASE_URL` and finite test limits;
+the root command forces test mode. Do not reuse this provisioning policy for a
+shared/local developer/hosted database or relax the application transport guard.
+
+The suite must still prove rollback, replay, owned cleanup, and independent
+sentinel preservation before service disposal. Container teardown does not count
+as cleanup evidence. Empty application history is reported as empty; registration
+must later establish fresh non-empty application migration coverage.
+
+## Failures and recovery
+
+Changed head/base, conflicts, unresolved reviews, unsupported protection, failed
+or ambiguous CI evidence, lost access, and timeout stop delivery. Missing checks
+can wait until the deadline; skipped/neutral/cancelled/stale/foreign results cannot
+satisfy a mandatory gate. Additional GitHub-required checks must also succeed.
+
+Inspect the reported PR and CI run. Fix failures through normal reviewed commits
+and obtain authorization for a new head. A base-only change requires a deliberate
+update/revalidation and rerun; the helper never rebases the branch. It never
+reruns CI, retries a merge mutation, bypasses protection, closes an unmerged PR,
+or deletes a branch. An uncertain network response is reconciled read-only; an
+unknown outcome is reported as unknown rather than success. If opening failed,
+look up the existing PR before retrying to avoid duplicates.
+
+## Observed setup and validation
+
+2026-10-25: persistence PR #2 was separately authorized and squash-merged as
+`e894969705067ad7fde34ef887a81832486a4ce3`; the unpublished automation proposal
+was rebased onto that main baseline. The persistence recheck passed all seven root
+gates, including 102 unit tests and the real isolated PostgreSQL suite on Windows.
+GitHub CLI 2.103.2 was installed with owner approval and authenticated as `Reza-HM`.
+
+Authenticated inspection: repository public; owner administration/push access;
+Actions enabled with read-only default token and PR-review approval disabled;
+squash merging enabled; automatic branch deletion/native auto-merge disabled;
+no current classic protection or effective rules on `main`. GitHub Actions app ID
+15368 was read from its public app metadata. These are dated observations, not
+proof of future settings. Protection activation, actual GitHub CI, helper/live
+merge acceptance, and any unperformed platform checks are recorded as pending
+until observed. No Linux, commercial workload, or non-empty account coverage is
+claimed by the local persistence recheck.
+
+The 2026-10-25 dependency audit reports three high-severity entries rooted in the
+existing `multer@2.4.0` dependency of Nest's Express adapter
+([GHSA-q7qp-rjg7-q26m](https://github.com/advisories/GHSA-q7qp-rjg7-q26m)). The
+automation lockfile change does not alter those existing packages, and the pinned
+OpenSpec addition introduces no advisory reported by that audit. A production
+dependency upgrade is separate work; no force-fix, downgrade, or audit suppression
+is included here. Current API code has no upload/file-filter implementation.
+
+Local implementation acceptance on 2026-10-25 (Windows, Node 24.20.0, npm 12.2.0,
+PostgreSQL 18.6): clean `npm ci --no-fund`, lint, typecheck, 13 unit suites with
+181 tests (79 delivery tests), build, Chromium, three API smoke checks, live
+integration on the isolated test database, and strict current-spec/active-change
+validation passed. The live suite reported zero application migrations, successful
+technical commit/rollback/replay/failed-migration rollback, and both sentinel
+preservation cases. Credentials were not printed or modified.
+
+The clean install left the committed lockfile content unchanged from the prepared
+dependency update. npm blocked dependency install scripts; no blanket script
+approval was added. actionlint 1.7.12, downloaded from its official release and
+verified against its published SHA-256 checksum, accepted the workflow. Helper
+argument guards were executed in PowerShell and Git Bash on Windows. The actual
+authenticated merge helper also refused missing main protection without issuing a
+merge request. Native Linux and GitHub CI/service execution remain pending until
+the authorized PR runs them; first live helper merge remains separately unverified.

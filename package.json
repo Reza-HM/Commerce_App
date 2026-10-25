@@ -24,7 +24,9 @@
     "test:e2e": "node scripts/workspace.mjs test:e2e",
     "test:smoke": "node scripts/workspace.mjs test:smoke",
     "db:generate": "npm exec --workspace @commerce/database -- drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "node scripts/workspace.mjs db:migrate"
+    "db:migrate": "node scripts/workspace.mjs db:migrate",
+    "pr:open": "node scripts/github-delivery.cjs open",
+    "pr:merge": "node scripts/github-delivery.cjs merge"
   },
   "devEngines": {
     "runtime": {
@@ -39,6 +41,7 @@
     }
   },
   "devDependencies": {
+    "@fission-ai/openspec": "1.14.3",
     "@playwright/test": "1.64.1",
     "@types/jest": "30.0.0",
     "@types/node": "24.10.1",

@@ -138,5 +138,23 @@ approval was added. actionlint 1.7.12, downloaded from its official release and
 verified against its published SHA-256 checksum, accepted the workflow. Helper
 argument guards were executed in PowerShell and Git Bash on Windows. The actual
 authenticated merge helper also refused missing main protection without issuing a
-merge request. Native Linux and GitHub CI/service execution remain pending until
-the authorized PR runs them; first live helper merge remains separately unverified.
+merge request. First live helper merge remains separately unverified.
+
+The opening helper created [PR #3](https://github.com/Reza-HM/Commerce_App/pull/3)
+at the explicitly approved head. Its [first CI run](https://github.com/Reza-HM/Commerce_App/actions/runs/40223863697)
+failed before installation in both jobs: setup-node's cache lookup invoked Node's
+bundled npm 11.19.0 before npm 12.2.0 was selected, and the repository's runtime
+guard correctly rejected it. Later steps were skipped and the jobs failed.
+The workflow now selects Node with automatic caching disabled, installs npm from
+the runner's temporary directory, then restores the download cache using the
+supported npm. Version enforcement and both mandatory jobs remain unchanged.
+Successful Linux quality and live database execution remain pending.
+
+After both named checks registered with GitHub Actions app 15368, the owner
+approved protection payload was applied and read back from GitHub on 2026-10-25.
+`main` now requires PRs, successful `quality` and `database` checks from that app,
+an up-to-date base, resolved conversations, and administrator enforcement. Stale
+reviews are dismissed; required independent approvals are zero; force pushes and
+branch deletion are disabled. Squash support remains enabled, native auto-merge
+and automatic branch deletion remain disabled, and there are no effective
+ruleset/merge-queue requirements. Future helper calls recheck these settings.

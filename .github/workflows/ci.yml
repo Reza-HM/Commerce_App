@@ -30,14 +30,18 @@ jobs:
           persist-credentials: false
           set-safe-directory: false
           clean: false
-      - name: Set up Node and npm download cache
+      - name: Set up Node before selecting npm
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.20.0'
-          cache: npm
+          package-manager-cache: false
       - name: Select the supported npm version
         working-directory: ${{ runner.temp }}
         run: npm install --global npm@12.2.0 --ignore-scripts --no-fund
+      - name: Restore npm download cache with the supported npm
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          cache: npm
       - name: Install the committed lockfile
         run: npm ci --no-fund
       - run: npm run lint
@@ -77,14 +81,18 @@ jobs:
           persist-credentials: false
           set-safe-directory: false
           clean: false
-      - name: Set up Node and npm download cache
+      - name: Set up Node before selecting npm
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.20.0'
-          cache: npm
+          package-manager-cache: false
       - name: Select the supported npm version
         working-directory: ${{ runner.temp }}
         run: npm install --global npm@12.2.0 --ignore-scripts --no-fund
+      - name: Restore npm download cache with the supported npm
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          cache: npm
       - name: Install the committed lockfile
         run: npm ci --no-fund
       - name: Validate actual migrations, rollback, and owned cleanup

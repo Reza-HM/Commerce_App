@@ -113,31 +113,57 @@ validates explicit `MIGRATION_DATABASE_URL` and TLS settings. Once migrations
 exist, Drizzle applies versioned history. Run once as an operator action, outside
 API startup/replication. No schema sync, automatic migration/reset/rollback exists.
 
-## Owner-approved database test exception
+The operator command and technical integration fixtures share
+`scripts/migration-history.cjs` for history application. Target configuration and
+pool lifecycle remain with each caller: the operator command validates only
+`MIGRATION_DATABASE_*`; integration validates only its test execution target.
+Empty history bypasses the migrator entirely, including journal-metadata DDL.
+History length is not a count of pending or newly applied migrations. The real
+application-history replay phase is still pending implementation/live verification
+in task 2.2 of `enable-account-persistence-validation`; technical fixture replay
+does not establish that coverage.
 
-On **2026-10-23** the owner waived a dedicated TLS test database as a completion
-gate. None is available. Unit tests use injected driver doubles. Production
+## Historical foundation waiver and persistence validation
+
+On **2026-10-23** the owner waived a dedicated TLS test database only for completion
+of the archived `initialize-store-foundation` change. That waiver does not waive
+live acceptance for `enable-account-persistence-validation` or subsequent account
+persistence changes. Until a real run passes, live validation remains incomplete.
+Unit tests use injected driver doubles. Production
 `test:smoke` children use valid verified-TLS configuration with a test-owned
 unavailable TCP endpoint, asserting live 200 and ready 503. Healthy readiness is
 injected only in unit tests; production has no fake healthy-database mode.
 
-The optional command remains strict:
+The live command remains strict and is a mandatory persistence completion gate:
 
 ```text
 npm run test:integration
 ```
 
-An operator must supply an independently provisioned dedicated PostgreSQL database,
-`NODE_ENV=test`, `TEST_DATABASE_URL` using the certificate hostname,
+An operator must supply an independently provisioned PostgreSQL database reserved
+for this application's tests, never production, shared development, or another
+application's data. Run one suite/migration owner at a time per test database;
+parallel jobs need separate databases. The runner requires `NODE_ENV=test` and
+`TEST_DATABASE_URL` using the certificate hostname,
 `TEST_DATABASE_TLS_MODE=verify-full`, and `TEST_DATABASE_CA_FILE` if default trust
 roots are insufficient. Synthetic URL shape:
 `postgresql://test_user:placeholder@db.test.example:5432/commerce_test`.
-Credentials need CONNECT, CREATE SCHEMA and rights to create/use/drop their own
-fixture tables/metadata, without superuser or service-control permissions.
+Credentials need CONNECT, CREATE SCHEMA, and rights to apply reviewed test-application
+migrations and create/use/drop precisely owned technical fixtures/metadata. They
+must not have superuser, database-drop, role-management, service-control, or
+production database access. Runtime DML credentials need no new privileges.
+Use private session configuration or a local environment loader; none is supplied
+or automatically loaded by the repository. Do not paste credentials into commands
+or evidence, commit environment files, or disable certificate/hostname verification.
 Supply applicable development/migration URLs as well: preflight rejects matching
 parsed host/port/database despite different credentials, encoding or default port
 formatting. It cannot establish safety across undisclosed DNS aliases or omitted
 non-test URLs; selecting a genuinely distinct database is the operator's duty.
+
+The `TEST_DATABASE_` connection is the runner's only execution target. Runtime and
+operator migration connections are comparison inputs, not fallback targets. Never
+temporarily set `MIGRATION_DATABASE_URL` to the test URL: matching targets must fail.
+Preflight checks runtime mode and configuration before constructing clients.
 
 Guarding precedes clients/writes. The suite checks connectivity, then creates one
 random `foundation_<uuid>` schema for rollback/migration replay. Cleanup drops
@@ -152,6 +178,25 @@ cancellation, transaction rollback, migration replay and fixture cleanup. The
 live suite provides connectivity/rollback/replay coverage; live TLS-negative and
 fault-injection extensions remain follow-up work. Driver doubles establish
 contracts, not live PostgreSQL correctness. Revisit before commercial use.
+
+### Persistence-validation checkpoint (2026-10-25)
+
+Windows, Node 24.20.0, npm 12.2.0. Tasks 1.1–1.3 and 2.1 are implemented:
+test-mode/TLS/target preflight, pre-client validation, operator setup instructions,
+and the shared history-application helper. Lint and type checking pass; the unit
+suite passes 9 suites / 88 tests. Strict validation passes for this change and
+the three current foundation specifications. A missing-target invocation of
+`npm run test:integration` with `NODE_ENV=test` returns the expected exit 1 before
+clients are created. This is prerequisite-error evidence, not live validation.
+
+Implementation is paused at task 2.2 because no dedicated TLS database is
+available. Real application-history replay, stronger failed-migration rollback,
+independent sentinel preservation, owned cleanup extensions, and their live
+acceptance are not complete. PostgreSQL version and live outcomes remain
+unverified. No account tables/migrations, dependencies, or application features
+have been added. The remaining build/browser/process regression gates for this
+change have not been rerun at this partial checkpoint; the historical foundation
+record below is not a substitute for their final implementation acceptance.
 
 ## HTTP and shutdown
 

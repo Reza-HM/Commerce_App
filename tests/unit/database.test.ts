@@ -22,6 +22,38 @@ test('guard requires a verified dedicated target and compares decoded normalized
   expect(guardedTestConfiguration({...env, TEST_DATABASE_URL:'postgres://user:secret@localhost/test'}).connection.ssl).toEqual({rejectUnauthorized:true});
 });
 
+test.each([undefined, 'development', 'production', 'invalid'])('test guard rejects NODE_ENV=%s', mode => {
+  expect(() => guardedTestConfiguration({NODE_ENV:mode,TEST_DATABASE_URL:'postgres://user:secret@db.example/test'}))
+    .toThrow('NODE_ENV');
+});
+
+test.each([
+  ['postgresql://other:other@DB.EXAMPLE.:5432/%74est', 'postgres://user:secret@db.example/test'],
+  ['postgres://other:other@127.0.0.1/test', 'postgres://user:secret@localhost:5432/test'],
+  ['postgres://other:other@[::1]:5432/test', 'postgres://user:secret@LOCALHOST./%74est']
+])('test guard rejects equivalent identities for both comparison targets', (comparison, target) => {
+  for (const prefix of ['DATABASE', 'MIGRATION_DATABASE']) {
+    expect(() => guardedTestConfiguration({NODE_ENV:'test',TEST_DATABASE_URL:target,[`${prefix}_URL`]:comparison}))
+      .toThrow('dedicated target');
+  }
+});
+
+test.each([
+  {TEST_DATABASE_TLS_MODE:'local'},
+  {NODE_TLS_REJECT_UNAUTHORIZED:'0'},
+  {TEST_DATABASE_URL:'postgres://user:secret@localhost/test?sslmode=disable'},
+  {TEST_DATABASE_URL:'postgres://user:secret@localhost/test?sslrootcert=PRIVATE_VALUE'},
+  {TEST_DATABASE_CA_FILE:'PRIVATE_VALUE/not-present.pem'}
+])('test guard retains TLS/configuration failures without leaking values', values => {
+  try {
+    guardedTestConfiguration({NODE_ENV:'test',TEST_DATABASE_URL:'postgres://user:secret@localhost/test',...values});
+    throw Error('Expected preflight failure');
+  } catch (error) {
+    expect((error as Error).message).toMatch(/^Invalid or missing configuration:/);
+    expect((error as Error).message).not.toMatch(/secret|postgres:\/\/|PRIVATE_VALUE/);
+  }
+});
+
 test('effective pool options bound resources without a connection string override', () => {
   const options = poolOptions(config());
   expect(options).toMatchObject({max:5, connectionTimeoutMillis:1000, statement_timeout:5000, query_timeout:5000});

@@ -180,3 +180,25 @@ reviews are dismissed; required independent approvals are zero; force pushes and
 branch deletion are disabled. Squash support remains enabled, native auto-merge
 and automatic branch deletion remain disabled, and there are no effective
 ruleset/merge-queue requirements. Future helper calls recheck these settings.
+
+Final delivery on 2026-10-25: the owner explicitly authorized pushing and merging
+head `14712a7f430acea16f05889a30d9b314af8226ef`. Both jobs passed in
+[the final PR run](https://github.com/Reza-HM/Commerce_App/actions/runs/40224800611).
+The actual merge helper then conditionally squash-merged
+[PR #3](https://github.com/Reza-HM/Commerce_App/pull/3), confirmed the outcome, and
+reported commit `4d5e0a5d3dbf8637ac44e15faf066f0c89fc96d6`. An independent API
+read confirmed the exact merged head and resulting commit. Both jobs also passed
+in [the automatic main-push run](https://github.com/Reza-HM/Commerce_App/actions/runs/40224979664).
+The feature branches were retained. This establishes the first real helper merge
+in addition to the simulated success/refusal tests.
+
+The owner requested finalization and archive after delivery. All 16 tasks and
+all planning artifacts were complete. The nine `github-delivery` requirements
+were synced into the current spec, with Purpose/scenarios preserved, and the
+change artifacts were moved unchanged to
+`openspec/changes/archive/2026-10-25-automate-github-pr-workflow/`.
+The documentation finalization is maintained separately from the already merged
+implementation PR; inspect its current Git/PR state before starting new work.
+Finalization checks passed locally: lint, typecheck, all 181 unit tests across
+13 suites, and strict validation of all four current specifications. The archive
+move preserved every artifact's content, including `.openspec.yaml`.

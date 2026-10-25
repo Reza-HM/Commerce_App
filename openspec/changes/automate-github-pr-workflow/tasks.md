@@ -11,8 +11,8 @@ All tasks below are implementation after proposal approval. Planning does not co
 ## 2. Required CI and isolated integration
 
 - [x] 2.1 Add the read-only `quality` and `database` jobs with the specified PR/main/manual triggers, stable names, finite timeouts, current runtime versions, verified action SHAs/service digest, and per-PR cancellation. Review workflow syntax and confirm no path skips, write permissions, private secrets, deployment steps, or cached build/database state are introduced.
-- [ ] 2.2 Run the complete ordered quality command list, including Chromium/OS installation and local strict OpenSpec validation; document the two job names and Linux coverage limits. Verify a failed command propagates failure and draft PRs are not excluded.
-- [ ] 2.3 Provision the disposable CI-only PostgreSQL test service using the proposed isolated trust-authentication policy, host-loopback port publishing, health checks, no volumes/private credentials, and explicit `TEST_DATABASE_URL`. Run the existing serial live suite; require real rollback/replay/cleanup/sentinel evidence and preserve missing/unsafe-target unit coverage without altering application guards.
+- [x] 2.2 Run the complete ordered quality command list, including Chromium/OS installation and local strict OpenSpec validation; document the two job names and Linux coverage limits. Verify a failed command propagates failure and draft PRs are not excluded.
+- [x] 2.3 Provision the disposable CI-only PostgreSQL test service using the proposed isolated trust-authentication policy, host-loopback port publishing, health checks, no volumes/private credentials, and explicit `TEST_DATABASE_URL`. Run the existing serial live suite; require real rollback/replay/cleanup/sentinel evidence and preserve missing/unsafe-target unit coverage without altering application guards.
 - [x] 2.4 Document CI provisioning, finite limits, exact existing test ownership rules, and empty-history limitations alongside the workflow. Review the concrete CI changes with the owner and obtain approval before their commit; never interpret proposal approval alone as pipeline-commit approval.
 
 ## 3. PR opening and merge helpers
@@ -26,9 +26,9 @@ All tasks below are implementation after proposal approval. Planning does not co
 ## 4. Integrated acceptance and activation
 
 - [x] 4.1 Run lint, typecheck, unit tests, build, browser tests, API smoke, and the guarded local live integration gate after updating to persistence; run strict validation of this change and current specs. Review the complete diff against all scenarios and record actual command/platform results without claiming Linux or GitHub success from local tests alone.
-- [ ] 4.2 Present the final commits and PR title/body; after explicit push/PR authorization, publish this branch and exercise the opening helper on this change's own PR. Attach the created PR to the chat. Observe both actual GitHub jobs, including live database evidence; fix failures normally and do not weaken required checks or quietly rerun until green.
+- [x] 4.2 Present the final commits and PR title/body; after explicit push/PR authorization, publish this branch and exercise the opening helper on this change's own PR. Attach the created PR to the chat. Observe both actual GitHub jobs, including live database evidence; fix failures normally and do not weaken required checks or quietly rerun until green.
 - [x] 4.3 Present the exact repository-settings diff for approval, apply only authorized settings, and verify effective `main` protection and the two expected check sources after they exist. Confirm current-base checks, resolved conversations, administrator enforcement, squash support, zero independent required approvals for the agreed solo workflow, no queue, and no automatic branch deletion. Keep automated merging unavailable if any prerequisite is unsupported or unverifiable.
-- [ ] 4.4 Record passing helper refusal/conditional-merge tests, actual CI run/PR links, and activation outcomes. Report any first live merge still unperformed as unverified; verify no implementation completion claim implies an unobserved live merge or any account/deployment work.
+- [x] 4.4 Record passing helper refusal/conditional-merge tests, actual CI run/PR links, and activation outcomes. Report any first live merge still unperformed as unverified; verify no implementation completion claim implies an unobserved live merge or any account/deployment work.
 
 ## Workflow follow-up
 

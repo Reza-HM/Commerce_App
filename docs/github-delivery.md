@@ -106,7 +106,7 @@ was rebased onto that main baseline. The persistence recheck passed all seven ro
 gates, including 102 unit tests and the real isolated PostgreSQL suite on Windows.
 GitHub CLI 2.103.2 was installed with owner approval and authenticated as `Reza-HM`.
 
-Authenticated inspection: repository public; owner administration/push access;
+Initial authenticated inspection: repository public; owner administration/push access;
 Actions enabled with read-only default token and PR-review approval disabled;
 squash merging enabled; automatic branch deletion/native auto-merge disabled;
 no current classic protection or effective rules on `main`. GitHub Actions app ID
@@ -138,7 +138,9 @@ approval was added. actionlint 1.7.12, downloaded from its official release and
 verified against its published SHA-256 checksum, accepted the workflow. Helper
 argument guards were executed in PowerShell and Git Bash on Windows. The actual
 authenticated merge helper also refused missing main protection without issuing a
-merge request. First live helper merge remains separately unverified.
+merge request. The first live helper merge had not been performed at this
+pre-delivery acceptance snapshot; its final outcome belongs to PR #3's delivery
+record and requires separate, exact-head authorization.
 
 The opening helper created [PR #3](https://github.com/Reza-HM/Commerce_App/pull/3)
 at the explicitly approved head. Its [first CI run](https://github.com/Reza-HM/Commerce_App/actions/runs/40223863697)
@@ -148,7 +150,27 @@ guard correctly rejected it. Later steps were skipped and the jobs failed.
 The workflow now selects Node with automatic caching disabled, installs npm from
 the runner's temporary directory, then restores the download cache using the
 supported npm. Version enforcement and both mandatory jobs remain unchanged.
-Successful Linux quality and live database execution remain pending.
+The corrected head `b78c24c61e86ace6a9ee09caf6bfe7f64147b369` passed both jobs in
+[run 40224461528](https://github.com/Reza-HM/Commerce_App/actions/runs/40224461528).
+`quality` completed in 1m45s and `database` in 1m1s on Ubuntu 24.04 with Node
+24.20.0/npm 12.2.0. Quality passed lint, typecheck, all 181 unit tests across 13
+suites, production build, Chromium installation and one browser test, three API
+smoke checks, and strict validation of all four OpenSpec items. Draft PRs have no
+exclusion, and the first run demonstrated command-failure propagation.
+
+The fresh PostgreSQL 18.6 service passed actual Linux integration. Its result
+reported zero application migrations; successful technical commit, rollback,
+replay and failed-migration rollback; and preservation of the independent
+sentinels after both successful and deliberately failing workers. The service
+published only to loopback and used the explicit CI test target. This establishes
+the present suite on Linux; non-empty account migration coverage, remaining pool
+fault scenarios, and commercial capacity remain unproven.
+
+Read-only execution of the actual helper rejected the first failed CI run and
+accepted the corrected run's current-head/current-base evidence under active
+protection. No merge request was issued by either evidence check. All 79 helper
+tests, including conditional merge and refusal cases, passed on Windows and Linux.
+Any later commit must earn its own fresh CI results before delivery.
 
 After both named checks registered with GitHub Actions app 15368, the owner
 approved protection payload was applied and read back from GitHub on 2026-10-25.

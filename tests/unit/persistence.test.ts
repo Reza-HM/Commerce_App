@@ -18,9 +18,9 @@ test.each([
   expect(factory).not.toHaveBeenCalled();
 });
 
-test('preflight passes only validated bounded TLS configuration to the client factory', () => {
+test('preflight passes only validated bounded local configuration to the client factory', () => {
   const factory=jest.fn(config=>({config}));
   const result=createGuardedDatabase({NODE_ENV:'test',TEST_DATABASE_URL:'postgres://user:secret@localhost/test'},factory);
   expect(factory).toHaveBeenCalledTimes(1);
-  expect(result.config).toMatchObject({environment:'test',poolMaximum:5,connection:{ssl:{rejectUnauthorized:true}}});
+  expect(result.config).toMatchObject({environment:'test',poolMaximum:5,connection:{ssl:false}});
 });

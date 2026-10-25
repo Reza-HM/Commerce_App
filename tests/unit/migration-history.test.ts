@@ -75,10 +75,10 @@ test('operator validates only its explicit target and closes clients after failu
     const database={orm:{},close:jest.fn().mockResolvedValue(undefined)};
     const createDatabase=jest.fn((config:DatabaseConfiguration)=>({...database,config})), migrator=jest.fn().mockResolvedValue(undefined), report=jest.fn();
     const options={folder:f.folder,createDatabase,migrator,report};
-    const testOnly={NODE_ENV:'test',TEST_DATABASE_URL:'postgres://fixture:PRIVATE_VALUE@localhost/test'};
-    await expect(runMigrations(testOnly,options)).rejects.toThrow('MIGRATION_DATABASE_URL');
+    const missingTest={NODE_ENV:'test',DATABASE_URL:'postgres://fixture:PRIVATE_VALUE@localhost/development'};
+    await expect(runMigrations(missingTest,options)).rejects.toThrow('TEST_DATABASE_URL');
     expect(createDatabase).not.toHaveBeenCalled();
-    const env={...testOnly,MIGRATION_DATABASE_URL:'postgres://operator:secret@operator.example/operator_db'};
+    const env={NODE_ENV:'development',DATABASE_URL:'postgres://operator:secret@localhost/operator_db',TEST_DATABASE_URL:'postgres://fixture:PRIVATE_VALUE@localhost/test'};
     f.write('{"entries":[]}');
     await expect(runMigrations(env,options)).resolves.toEqual({empty:true,count:0});
     expect(report).toHaveBeenCalledWith('No pending migrations.');
@@ -87,7 +87,7 @@ test('operator validates only its explicit target and closes clients after failu
     const failure=Error('PRIVATE_VALUE');
     migrator.mockRejectedValueOnce(failure);
     await expect(runMigrations(env,options)).rejects.toBe(failure);
-    expect(createDatabase.mock.calls[0]?.[0]).toMatchObject({connection:{host:'operator.example',database:'operator_db',user:'operator'}});
+    expect(createDatabase.mock.calls[0]?.[0]).toMatchObject({connection:{host:'localhost',database:'operator_db',user:'operator'}});
     expect(database.close).toHaveBeenCalledTimes(1);
     expect(report.mock.calls.flat().join()).not.toContain('PRIVATE_VALUE');
   } finally {f.close();}

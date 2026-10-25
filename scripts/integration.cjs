@@ -1,55 +1,151 @@
 const assert = require('node:assert/strict');
-const {randomUUID} = require('node:crypto');
-const {mkdtempSync, mkdirSync, writeFileSync, rmSync} = require('node:fs');
-const {tmpdir} = require('node:os');
-const {join, resolve, sep} = require('node:path');
+const {join} = require('node:path');
+const {spawnSync} = require('node:child_process');
+const {sql} = require('drizzle-orm');
 const {ConfigurationError} = require('@commerce/database');
-const {createGuardedDatabase} = require('./integration-support.cjs');
+const {createGuardedDatabase, withCleanup, cleanupAll, sqlState} = require('./integration-support.cjs');
 const {readMigrationHistory, applyMigrationHistory} = require('./migration-history.cjs');
+const {OwnedSchema, OwnedDirectory, schemaSnapshot, journalSnapshot, relationExists} = require('./integration-fixtures.cjs');
+const {validateApplicationHistory} = require('./integration-migrations.cjs');
 
-async function main() {
-  // Guard before constructing clients or creating fixtures. No fallback target.
-  const database = createGuardedDatabase(process.env);
-  const schema = 'foundation_' + randomUUID().replaceAll('-', '');
-  const quoted = '"' + schema + '"';
-  const folder = mkdtempSync(join(tmpdir(),'commerce-migration-'));
-  let created = false;
+class ExpectedWorkerFailure extends Error {}
+
+async function validateSentinels(database) {
+  const sentinel = new OwnedSchema(database, 'sentinel');
+  let preserved = false;
   try {
-    assert.equal(await database.ready(), true, 'Verified TLS connection unavailable');
-    await database.orm.execute(`CREATE SCHEMA ${quoted}`); created = true;
-    await database.orm.execute(`CREATE TABLE ${quoted}.fixture (value integer)`);
-    await assert.rejects(database.transaction(async client => {
-      await client.query(`INSERT INTO ${quoted}.fixture VALUES (1)`);
-      throw Error('rollback fixture');
-    }));
-    const result = await database.orm.execute(`SELECT count(*)::int AS count FROM ${quoted}.fixture`);
-    assert.equal(result.rows[0].count,0);
-    mkdirSync(join(folder,'meta'));
-    writeFileSync(join(folder,'meta/_journal.json'),JSON.stringify({version:'7',dialect:'postgresql',entries:[{idx:0,version:'7',when:1,tag:'0000_fixture',breakpoints:true}]}));
-    writeFileSync(join(folder,'0000_fixture.sql'),`INSERT INTO ${quoted}.fixture VALUES (42);`);
-    const options={migrationsSchema:schema};
-    const history=readMigrationHistory(folder);
-    await applyMigrationHistory(history,()=>database,options);
-    await applyMigrationHistory(history,()=>database,options);
-    const replay=await database.orm.execute(`SELECT count(*)::int AS count FROM ${quoted}.fixture`);
-    assert.equal(replay.rows[0].count,1);
-    writeFileSync(join(folder,'meta/_journal.json'),JSON.stringify({version:'7',dialect:'postgresql',entries:[
-      {idx:0,version:'7',when:1,tag:'0000_fixture',breakpoints:true},
-      {idx:1,version:'7',when:2,tag:'0001_invalid',breakpoints:true}
-    ]}));
-    writeFileSync(join(folder,'0001_invalid.sql'),'THIS IS NOT SQL;');
-    await assert.rejects(applyMigrationHistory(readMigrationHistory(folder),()=>database,options));
-    console.log('Live TLS connectivity, rollback and migration replay passed.');
-  } finally {
-    try { if(created) await database.orm.execute(`DROP SCHEMA ${quoted} CASCADE`); }
-    finally {
-      await database.close();
-      if(!resolve(folder).startsWith(resolve(tmpdir())+sep) || !folder.includes('commerce-migration-')) throw Error('Unsafe fixture path');
-      rmSync(folder,{recursive:true,force:true});
+    await sentinel.create();
+    const table = sentinel.table('sentinel');
+    await database.orm.execute(`CREATE TABLE ${table} (id integer PRIMARY KEY, payload text NOT NULL)`);
+    await database.orm.execute(`INSERT INTO ${table} VALUES (1,'unchanged alpha'),(2,'unchanged beta')`);
+    const definition = await schemaSnapshot(database, sentinel.schema);
+    const baseline = (await database.orm.execute(`SELECT id,payload FROM ${table} ORDER BY id`)).rows;
+    for (const fails of [false, true]) {
+      const worker = new OwnedSchema(database, 'worker');
+      const operation = () => withCleanup(async () => {
+        await worker.create();
+        const fixture = worker.table('fixture');
+        await database.orm.execute(`CREATE TABLE ${fixture} (id integer PRIMARY KEY, payload text NOT NULL)`);
+        worker.trackRecord(worker.schema, 'fixture', 'id', 1);
+        await database.orm.execute(`INSERT INTO ${fixture} VALUES (1,'committed before cleanup')`);
+        worker.confirmRecord(worker.schema, 'fixture', 'id', 1);
+        if (fails) throw new ExpectedWorkerFailure('Deliberate worker failure');
+      }, () => worker.cleanup());
+      if (fails) {
+        let expected = false;
+        try { await operation(); }
+        catch (error) {
+          if (!(error instanceof ExpectedWorkerFailure)) throw error;
+          expected = true;
+        }
+        assert.equal(expected, true, 'Expected worker failure did not occur');
+      } else await operation();
+      const remaining = await database.orm.execute(sql`SELECT 1 FROM pg_namespace WHERE nspname=${worker.schema}`);
+      assert.equal(remaining.rows.length, 0, 'Worker schema was not cleaned');
+      assert.deepEqual(await schemaSnapshot(database, sentinel.schema), definition, 'Sentinel definition changed');
+      assert.deepEqual((await database.orm.execute(`SELECT id,payload FROM ${table} ORDER BY id`)).rows, baseline, 'Sentinel contents changed');
     }
+    preserved = true;
+  } finally {
+    if (preserved) await cleanupAll([() => sentinel.cleanup()]);
+    else if (sentinel.created) console.error(`Sentinel retained for inspection: ${sentinel.schema}`);
   }
+  return {successfulWorker: true, failingWorker: true};
 }
-main().catch(error=>{
-  console.error(error instanceof ConfigurationError ? error.message : 'Live database integration failed.');
-  process.exitCode=1;
-});
+
+function fixtureHistory(directory, failing) {
+  const entries = [{idx: 0, version: '7', when: 1, tag: '0000_fixture', breakpoints: true}];
+  if (failing) entries.push({idx: 1, version: '7', when: 2, tag: '0001_invalid', breakpoints: true});
+  directory.write('meta/_journal.json', JSON.stringify({version: '7', dialect: 'postgresql', entries}));
+  return readMigrationHistory(directory.folder);
+}
+
+async function validateTechnicalMigrations(database, env) {
+  const owner = new OwnedSchema(database, 'technical');
+  const directory = new OwnedDirectory();
+  return withCleanup(async () => {
+    await owner.create();
+    const table = owner.table('fixture');
+    await database.orm.execute(`CREATE TABLE ${table} (value integer PRIMARY KEY)`);
+    await database.transaction(client => client.query(`INSERT INTO ${table} VALUES ($1)`, [1]));
+    const rollback = new Error('Deliberate transaction rollback');
+    await assert.rejects(database.transaction(async client => {
+      await client.query(`INSERT INTO ${table} VALUES ($1)`, [2]);
+      throw rollback;
+    }), error => error === rollback);
+    await database.transaction(client => client.query(`INSERT INTO ${table} VALUES ($1)`, [3]));
+    const rows = async () => (await database.orm.execute(`SELECT value FROM ${table} ORDER BY value`)).rows;
+    assert.deepEqual(await rows(), [{value: 1}, {value: 3}]);
+
+    directory.write('0000_fixture.sql', `INSERT INTO ${table} VALUES (42);`);
+    const valid = fixtureHistory(directory, false);
+    owner.table('__drizzle_migrations');
+    const options = {migrationsSchema: owner.schema};
+    await applyMigrationHistory(valid, () => database, options);
+    const journal = await journalSnapshot(database, owner.schema);
+    assert.equal(journal.length, 1);
+    const baseline = await rows();
+    assert.deepEqual(baseline, [{value: 1}, {value: 3}, {value: 42}]);
+    await applyMigrationHistory(valid, () => database, options);
+    assert.deepEqual(await rows(), baseline);
+    assert.deepEqual(await journalSnapshot(database, owner.schema), journal);
+
+    const partial = owner.table('partial');
+    directory.write('0001_invalid.sql', [
+      `INSERT INTO ${table} VALUES (43);`,
+      `CREATE TABLE ${partial} (value integer);`,
+      'THIS IS NOT SQL;'
+    ].join('\n--> statement-breakpoint\n'));
+    const failing = fixtureHistory(directory, true);
+    await assert.rejects(applyMigrationHistory(failing, () => database, options), error => sqlState(error) === '42601');
+    const assertRollback = async () => {
+      assert.deepEqual(await rows(), baseline, 'Failed migration write survived');
+      assert.equal(await relationExists(database, owner.schema, 'partial'), false, 'Failed migration DDL survived');
+      assert.deepEqual(await journalSnapshot(database, owner.schema), journal, 'Failed migration journal changed');
+      assert.equal((await database.transaction(client => client.query('SELECT 17 AS value'))).rows[0].value, 17);
+    };
+    await assertRollback();
+    const child = spawnSync(process.execPath, [join(__dirname, '../tests/fixtures/migration-failure.cjs'), owner.schema, directory.folder], {
+      env: {...env, NODE_ENV: 'test'}, encoding: 'utf8', shell: false, timeout: 15000, maxBuffer: 16384
+    });
+    assert.equal(child.error, undefined, 'Migration child failed to execute');
+    assert.equal(child.signal, null);
+    assert.equal(child.status, 1, 'Failed migration child must exit nonzero');
+    assert.equal(child.stderr.trim(), 'Expected migration failure', 'Migration child reported an unexpected failure');
+    await assertRollback();
+    return {commit: true, rollback: true, replay: true, failedMigrationRollback: true, childExit: 1};
+  }, () => cleanupAll([() => owner.cleanup(), () => directory.cleanup()]));
+}
+
+async function main(env = process.env) {
+  const database = createGuardedDatabase(env);
+  return withCleanup(async () => {
+    assert.equal(await database.ready(), true, 'Local test database unavailable');
+    const server = (await database.orm.execute('SELECT current_database() AS database, current_setting(\'server_version\') AS version')).rows[0];
+    assert.equal(server.database, database.config.connection.database, 'Unexpected test database');
+    const application = await validateApplicationHistory(database, join(__dirname, '../packages/database/migrations'));
+    const applicationState = await schemaSnapshot(database);
+    const applicationJournal = await journalSnapshot(database);
+    const sentinel = await validateSentinels(database);
+    const technical = await validateTechnicalMigrations(database, env);
+    assert.deepEqual(await schemaSnapshot(database), applicationState, 'Fixture cleanup changed unrelated schema state');
+    assert.deepEqual(await journalSnapshot(database), applicationJournal, 'Fixture cleanup changed application migration history');
+    const evidence = {date: new Date().toISOString().slice(0, 10), platform: process.platform, node: process.version,
+      postgres: server.version, database: server.database, transport: 'local plaintext', application, sentinel, technical};
+    console.log(JSON.stringify(evidence));
+    console.log(application.empty
+      ? 'Live database integration passed. Empty application history is not non-empty account migration coverage.'
+      : `Live database integration passed: ${application.count} application migrations replayed.`);
+    return evidence;
+  }, () => database.close());
+}
+
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error instanceof ConfigurationError ? error.message : error instanceof AggregateError
+      ? 'Live database integration failed: fixture/resource cleanup incomplete.' : 'Live database integration failed.');
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {main, validateSentinels, validateTechnicalMigrations, ExpectedWorkerFailure};

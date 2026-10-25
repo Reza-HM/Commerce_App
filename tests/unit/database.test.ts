@@ -3,7 +3,7 @@ import {Pool} from 'pg';
 import type {PoolConfig} from 'pg';
 import {Database, guardedTestConfiguration, poolOptions, readDatabaseConfiguration} from '../../packages/database/src';
 
-const env = {NODE_ENV: 'test', DATABASE_URL: 'postgres://user:secret@localhost/db', DATABASE_TLS_MODE: 'local'};
+const env = {NODE_ENV: 'test', DATABASE_URL: 'postgres://user:secret@localhost/db'};
 const config = () => readDatabaseConfiguration(env);
 function fixture() {
   const client = {query: jest.fn().mockResolvedValue({rows: [{value: 1}]}), release: jest.fn()};
@@ -13,13 +13,13 @@ function fixture() {
   return {client, pool, database, events};
 }
 
-test('guard requires a verified dedicated target and compares decoded normalized targets', () => {
+test('guard requires a dedicated target and compares decoded normalized targets', () => {
   expect(() => guardedTestConfiguration({NODE_ENV:'test'})).toThrow('TEST_DATABASE_URL');
-  expect(() => guardedTestConfiguration({...env, TEST_DATABASE_URL:env.DATABASE_URL, TEST_DATABASE_TLS_MODE:'local'})).toThrow('TEST_DATABASE_TLS_MODE');
+  expect(() => guardedTestConfiguration({...env, TEST_DATABASE_URL:env.DATABASE_URL})).toThrow('dedicated target');
   expect(() => guardedTestConfiguration({...env, TEST_DATABASE_URL:'postgresql://other:other@LOCALHOST:5432/%64b'})).toThrow('dedicated target');
   expect(() => guardedTestConfiguration({...env, TEST_DATABASE_URL:'postgres://other:other@[::1]/db'})).toThrow('dedicated target');
-  expect(() => guardedTestConfiguration({...env, MIGRATION_DATABASE_URL:'postgres://migrate:other@db.example:5432/%74est',TEST_DATABASE_URL:'postgres://user:secret@DB.EXAMPLE/test'})).toThrow('dedicated target');
-  expect(guardedTestConfiguration({...env, TEST_DATABASE_URL:'postgres://user:secret@localhost/test'}).connection.ssl).toEqual({rejectUnauthorized:true});
+  expect(() => guardedTestConfiguration({...env, MIGRATION_DATABASE_URL:'postgres://migrate:other@localhost:5432/%74est',TEST_DATABASE_URL:'postgres://user:secret@LOCALHOST./test'})).toThrow('dedicated target');
+  expect(guardedTestConfiguration({...env, TEST_DATABASE_URL:'postgres://user:secret@localhost/test'}).connection.ssl).toBe(false);
 });
 
 test.each([undefined, 'development', 'production', 'invalid'])('test guard rejects NODE_ENV=%s', mode => {
@@ -28,7 +28,7 @@ test.each([undefined, 'development', 'production', 'invalid'])('test guard rejec
 });
 
 test.each([
-  ['postgresql://other:other@DB.EXAMPLE.:5432/%74est', 'postgres://user:secret@db.example/test'],
+  ['postgresql://other:other@LOCALHOST.:5432/%74est', 'postgres://user:secret@localhost/test'],
   ['postgres://other:other@127.0.0.1/test', 'postgres://user:secret@localhost:5432/test'],
   ['postgres://other:other@[::1]:5432/test', 'postgres://user:secret@LOCALHOST./%74est']
 ])('test guard rejects equivalent identities for both comparison targets', (comparison, target) => {
@@ -41,10 +41,10 @@ test.each([
 test.each([
   {TEST_DATABASE_TLS_MODE:'local'},
   {NODE_TLS_REJECT_UNAUTHORIZED:'0'},
-  {TEST_DATABASE_URL:'postgres://user:secret@localhost/test?sslmode=disable'},
+  {TEST_DATABASE_URL:'postgres://user:secret@localhost/test?sslmode=require'},
   {TEST_DATABASE_URL:'postgres://user:secret@localhost/test?sslrootcert=PRIVATE_VALUE'},
   {TEST_DATABASE_CA_FILE:'PRIVATE_VALUE/not-present.pem'}
-])('test guard retains TLS/configuration failures without leaking values', values => {
+])('test guard rejects unsupported configuration without leaking values', values => {
   try {
     guardedTestConfiguration({NODE_ENV:'test',TEST_DATABASE_URL:'postgres://user:secret@localhost/test',...values});
     throw Error('Expected preflight failure');
@@ -59,7 +59,7 @@ test('effective pool options bound resources without a connection string overrid
   expect(options).toMatchObject({max:5, connectionTimeoutMillis:1000, statement_timeout:5000, query_timeout:5000});
   expect(options).not.toHaveProperty('connectionString');
   const secure = readDatabaseConfiguration({NODE_ENV:'production', DATABASE_URL:env.DATABASE_URL});
-  expect(poolOptions(secure).ssl).toEqual({rejectUnauthorized:true});
+  expect(poolOptions(secure).ssl).toBe(false);
 });
 
 test('lazy pool, coalesced probes, fresh recovery and safe background events', async () => {

@@ -9,7 +9,7 @@ async function unusedPort() {
   const server=createServer();server.listen(0,'127.0.0.1');await once(server,'listening');
   const port=server.address().port;await new Promise(resolve=>server.close(resolve));return port;
 }
-const runtimeEnv=port=>({...process.env,NODE_ENV:'production',API_PORT:String(port),DATABASE_URL:'postgres://fixture:private-password@127.0.0.1:1/unavailable',DATABASE_TLS_MODE:'verify-full',NODE_TLS_REJECT_UNAUTHORIZED:undefined,DATABASE_CA_FILE:undefined});
+const runtimeEnv=port=>({...process.env,NODE_ENV:'production',API_PORT:String(port),DATABASE_URL:'postgres://fixture:private-password@127.0.0.1:1/unavailable',DATABASE_TLS_MODE:undefined,NODE_TLS_REJECT_UNAUTHORIZED:undefined,DATABASE_CA_FILE:undefined});
 async function boot(env) {
   const child=spawn(process.execPath,['apps/api/dist/main.js'],{env,stdio:['ignore','pipe','pipe']});
   let output='';child.stdout.on('data',chunk=>{output+=chunk;});child.stderr.on('data',chunk=>{output+=chunk;});

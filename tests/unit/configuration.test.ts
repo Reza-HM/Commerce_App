@@ -1,16 +1,12 @@
-import {mkdtempSync, writeFileSync, unlinkSync, rmdirSync} from 'node:fs';
-import {join} from 'node:path';
-import {tmpdir} from 'node:os';
-import {rootCertificates} from 'node:tls';
 import {ConfigurationError, readDatabaseConfiguration} from '@commerce/database';
 import type {DatabasePrefix, Environment} from '@commerce/database';
 import {readApiConfiguration} from '../../apps/api/src/configuration';
 
-const valid: Environment = {NODE_ENV: 'test', DATABASE_URL: 'postgresql://test:synthetic-password@localhost:5432/store'};
+const valid: Environment = {NODE_ENV: 'development', DATABASE_URL: 'postgresql://test:synthetic-password@localhost:5432/store'};
 
-test('configuration has verified TLS and bounded defaults without connecting', () => {
+test('configuration has local plaintext and bounded defaults without connecting', () => {
   const configuration = readApiConfiguration(valid);
-  expect(configuration.database.connection.ssl).toEqual({rejectUnauthorized: true});
+  expect(configuration.database.connection.ssl).toBe(false);
   expect(configuration.database.poolMaximum).toBe(5);
   expect(configuration.database.acquisitionTimeoutMs).toBe(1000);
   expect(configuration.database.statementTimeoutMs).toBe(5000);
@@ -27,7 +23,7 @@ test.each<[string, string | undefined]>([
   ['DATABASE_URL', 'https://synthetic-password@example.invalid/store'],
   ['DATABASE_URL', 'postgresql://test:synthetic-password@localhost/'],
   ['DATABASE_URL', 'postgresql://test:synthetic-password@localhost:99999/store'],
-  ['DATABASE_URL', 'postgresql://test:synthetic-password@localhost/store?sslmode=disable'],
+  ['DATABASE_URL', 'postgresql://test:synthetic-password@localhost/store?sslmode=require'],
   ['DATABASE_URL', 'postgresql://test:synthetic-password@localhost/store?sslrootcert=synthetic-password'],
   ['DATABASE_TLS_MODE', 'unsafe'], ['NODE_TLS_REJECT_UNAUTHORIZED', '0'],
   ['DATABASE_POOL_MAX', '0'], ['DATABASE_ACQUIRE_TIMEOUT_MS', '-1'],
@@ -49,15 +45,16 @@ test.each<[string, string | undefined]>([
   }
 });
 
-test('only explicitly selected local non-production transport can be plaintext', () => {
-  expect(readDatabaseConfiguration({...valid, DATABASE_TLS_MODE: 'local'}).connection.ssl).toBe(false);
-  expect(() => readDatabaseConfiguration({...valid, NODE_ENV: 'production', DATABASE_TLS_MODE: 'local'})).toThrow(ConfigurationError);
-  expect(() => readDatabaseConfiguration({...valid, DATABASE_URL: 'postgresql://test:synthetic-password@remote.invalid/store', DATABASE_TLS_MODE: 'local'})).toThrow(ConfigurationError);
+test.each(['development','test','production'])('plaintext remains restricted to loopback in %s', environment => {
+  expect(readDatabaseConfiguration({...valid, NODE_ENV:environment}).connection.ssl).toBe(false);
+  expect(() => readDatabaseConfiguration({...valid, NODE_ENV:environment, DATABASE_URL: 'postgresql://test:synthetic-password@remote.invalid/store'})).toThrow(ConfigurationError);
 });
 
-test.each<DatabasePrefix>(['DATABASE', 'MIGRATION_DATABASE', 'TEST_DATABASE'])('%s rejects URL TLS overrides', prefix => {
+test.each<DatabasePrefix>(['DATABASE', 'MIGRATION_DATABASE', 'TEST_DATABASE'])('%s accepts only the explicit disable option', prefix => {
+  expect(readDatabaseConfiguration({...valid, [`${prefix}_URL`]: 'postgresql://test:synthetic-password@localhost/store?sslmode=disable'},prefix).connection.ssl).toBe(false);
   expect(() => readDatabaseConfiguration({...valid, [`${prefix}_URL`]: 'postgresql://test:synthetic-password@localhost/store?sslmode=require'}, prefix))
     .toThrow(new ConfigurationError(`${prefix}_URL`));
+  expect(() => readDatabaseConfiguration({...valid, [`${prefix}_URL`]: 'postgresql://test:synthetic-password@localhost/store?sslmode=disable&sslmode=disable'}, prefix)).toThrow(ConfigurationError);
 });
 
 test('origins are exact, deduplicated HTTP origins', () => {
@@ -65,19 +62,12 @@ test('origins are exact, deduplicated HTTP origins', () => {
     .toEqual(['https://example.invalid', 'http://localhost:3000']);
 });
 
-test('explicit certificate bundles are parsed and file errors stay private', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'commerce-config-'));
-  const certificateFile = join(directory, 'public-ca.pem');
-  try {
-    const certificate = rootCertificates[0];
-    if (!certificate) throw new Error('Node trust store is unavailable');
-    writeFileSync(certificateFile, certificate);
-    expect(readDatabaseConfiguration({...valid, DATABASE_CA_FILE: certificateFile}).connection.ssl).toEqual({rejectUnauthorized: true, ca: certificate});
-    writeFileSync(certificateFile, 'not a certificate');
-    expect(() => readDatabaseConfiguration({...valid, DATABASE_CA_FILE: certificateFile})).toThrow(new ConfigurationError('DATABASE_CA_FILE'));
-    expect(() => readDatabaseConfiguration({...valid, DATABASE_CA_FILE: join(directory, 'synthetic-password.pem')})).toThrow(new ConfigurationError('DATABASE_CA_FILE'));
-  } finally {
-    unlinkSync(certificateFile);
-    rmdirSync(directory);
-  }
+test('obsolete certificate settings fail safely instead of implying encryption', () => {
+  expect(() => readDatabaseConfiguration({...valid,DATABASE_CA_FILE:'PRIVATE_PATH'})).toThrow(new ConfigurationError('DATABASE_CA_FILE'));
+});
+
+test('API test mode cannot substitute the development database',()=>{
+  expect(()=>readApiConfiguration({...valid,NODE_ENV:'test'})).toThrow('TEST_DATABASE_URL');
+  expect(()=>readApiConfiguration({...valid,NODE_ENV:'test',TEST_DATABASE_URL:valid.DATABASE_URL})).toThrow('dedicated target');
+  expect(readApiConfiguration({...valid,NODE_ENV:'test',TEST_DATABASE_URL:'postgres://fixture:secret@localhost/isolated_test'}).database.connection.database).toBe('isolated_test');
 });

@@ -1,5 +1,5 @@
 const {join} = require('node:path');
-const {Database, readDatabaseConfiguration, ConfigurationError} = require('@commerce/database');
+const {Database, readDatabaseConfiguration, guardedTestConfiguration, ConfigurationError} = require('@commerce/database');
 const {readMigrationHistory, applyMigrationHistory} = require('./migration-history.cjs');
 
 async function runMigrations(env = process.env, {
@@ -9,7 +9,7 @@ async function runMigrations(env = process.env, {
   report = message => console.log(message)
 } = {}) {
   // Configuration/target ownership stays here, never in the shared SQL helper.
-  const config = readDatabaseConfiguration(env, 'MIGRATION_DATABASE');
+  const config = env.NODE_ENV === 'test' ? guardedTestConfiguration(env) : readDatabaseConfiguration(env);
   const history = readMigrationHistory(folder);
   let database;
   try {

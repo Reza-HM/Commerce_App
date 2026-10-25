@@ -1,4 +1,4 @@
-import {ConfigurationError, readDatabaseConfiguration} from '@commerce/database';
+import {ConfigurationError, readDatabaseConfiguration, guardedTestConfiguration} from '@commerce/database';
 import type {DatabaseConfiguration, Environment} from '@commerce/database';
 
 export interface ApiConfiguration {
@@ -35,7 +35,7 @@ function readOrigins(env: Environment): readonly string[] {
 }
 
 export function readApiConfiguration(env: Environment): ApiConfiguration {
-  const database = readDatabaseConfiguration(env);
+  const database = env.NODE_ENV === 'test' ? guardedTestConfiguration(env) : readDatabaseConfiguration(env);
   const headerTimeoutMs = positiveInteger(env, 'API_HEADER_TIMEOUT_MS', 5000);
   const requestTimeoutMs = positiveInteger(env, 'API_REQUEST_TIMEOUT_MS', 10000);
   if (headerTimeoutMs > requestTimeoutMs) throw new ConfigurationError('API_HEADER_TIMEOUT_MS');

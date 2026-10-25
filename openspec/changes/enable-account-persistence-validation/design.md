@@ -4,51 +4,53 @@
 
 See `proposal.md` for motivation. The relevant observed implementation is:
 
-- `scripts/integration.cjs` calls `guardedTestConfiguration` before clients, requires verified TLS, and uses a random technical schema and temporary migration files. It tests one rolled-back insert, synthetic replay, and rejection of invalid SQL; it does not prove partial-migration rollback or sentinel preservation.
-- `packages/database/src/testing.ts` compares normalized host/port/database identities against configured `DATABASE_URL` and `MIGRATION_DATABASE_URL`. It cannot establish physical isolation across omitted connections or undisclosed DNS aliases. It currently accepts runtime environments other than `test` if their configuration is otherwise valid.
-- `scripts/migrate.cjs` uses explicit operator migration configuration and avoids connecting for empty history. `packages/database/migrations/meta/_journal.json` currently has zero entries; `schema.ts` has no business models.
+- `scripts/integration.cjs` guards before clients and uses a random technical schema and temporary migration files. Stronger rollback and sentinel preservation are pending.
+- `packages/database/src/testing.ts` compares normalized host/port/database identities against configured development and legacy migration URLs and requires test mode. It cannot establish physical isolation across omitted connections or undisclosed aliases.
+- The shared migration helper avoids connecting for empty history. `packages/database/migrations/meta/_journal.json` has zero entries; `schema.ts` has no business models.
 - The installed migration driver creates its journal metadata before its transaction and runs pending SQL and migration-entry insertion transactionally. Its `migrationsSchema` option relocates metadata, not schema-qualified application SQL.
-- The main database/workspace specs and `docs/foundation.md` record the 2026-10-23 foundation waiver. No test connection, TLS mode, CA path, or runtime environment is configured in the current process. Provisioning is outside this change.
+- The main database/workspace specs record the historical foundation waiver. On 2026-10-25 the owner supplied local `commerce_db` and `commerce_test` URLs in ignored `.env` and explicitly removed TLS requirements. This revision replaces the former transport contract; archived foundation records remain historical.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Turn the live integration command into a truthful completion gate with exact target and cleanup ownership, without changing production transport policy or pool limits.
+- Turn the live integration command into a truthful completion gate with exact target and cleanup ownership, retaining pool limits under the owner's revised local-only plaintext policy.
 - Reuse the actual migration execution path and make empty versus non-empty application coverage explicit.
 - Establish reusable isolation rules for later feature tests without creating their tables or endpoints.
 
 **Non-Goals:**
 
-- No database/container/provider provisioning, production migration execution, application-startup migrations, down-migration framework, CI/deploy edits, new dependency, or application behavior change.
+- No database/container/provider provisioning, production migration execution, application-startup migrations, down-migration framework, CI/deploy edits, new dependency, or business behavior change.
 - No account, credential, session, verification, recovery, or mail implementation. No fabricated application migration to make an empty history appear exercised.
-- No claim that passing these checks proves pool fault recovery, live TLS-negative handshakes, commercial readiness, or capacity for a registered-user count. Existing unverified checks remain recorded until independently executed.
+- No claim that passing these checks proves pool fault recovery, commercial readiness, or capacity for a registered-user count. Database transport for remote hosting is deferred; TLS-related acceptance checks are explicitly removed by the owner, not reported as passed.
 
 ## Decisions
 
-### 1. Keep the guarded verified-TLS path and require test mode
+### 1. Use only the two supplied local databases
 
-Extend the existing test guard with an explicit `NODE_ENV=test` check. Reuse the current parser, normalized identity comparison, bounded pool settings, URL-query rejection, and safe errors. Apply preflight before constructing any client, including child/worker clients. Do not temporarily map the test URL into `MIGRATION_DATABASE_URL`: that would obscure execution ownership and conflict with non-test target comparison.
+The current workflow accepts loopback PostgreSQL hosts, with `ssl: false`; omitted `sslmode` and exactly `sslmode=disable` are supported, while other query options, duplicates, fragments, and remote hosts are rejected. No CA or TLS-mode settings are needed. This applies in every runtime mode, including local production-build smoke; it is not a design for remote commercial hosting.
+
+Keep `NODE_ENV=test` and normalized non-test target comparison before every test client. Every automated database connection and migration, including API test-mode startup, uses guarded `TEST_DATABASE_URL`. Normal explicit development migrations use `DATABASE_URL`; a third migration URL is neither required nor an execution fallback. Continue comparing an optional legacy migration URL if present so its target cannot be mistaken for an isolated test target.
+
+Root database commands and API development load only database-related keys from the ignored root `.env` using Node's built-in parser. Explicit process settings win, including empty values that must fail validation. The integration root command sets test mode; normal migrations/API development default to development when no mode was supplied. Unit, build, browser, and smoke commands do not load `.env`. Missing files provide no invented credentials. The normal API production-start command retains explicit process configuration; deployment configuration is outside this change.
 
 Required operator setup:
 
 | Prerequisite | Exact contract |
 | --- | --- |
 | Database | A separately provisioned PostgreSQL database reserved for this application's tests, never production, shared development, or another application's data. Run one suite/migration owner at a time per database; parallel jobs require separate databases. |
-| Configuration | `NODE_ENV=test`, private `TEST_DATABASE_URL` containing the certificate hostname, and `TEST_DATABASE_TLS_MODE=verify-full` (also the existing safe default). Supply applicable non-test `DATABASE_URL` / `MIGRATION_DATABASE_URL` for comparison; never invent values for connections that do not exist. |
-| Trust | `TEST_DATABASE_CA_FILE` when Node's default roots do not trust the issuer. Certificate chain and hostname verification remain enabled for every test connection. No `NODE_TLS_REJECT_UNAUTHORIZED=0`, URL TLS overrides, plaintext fallback, or disabled verification. |
-| Privileges | CONNECT and rights to create/use the test application's schemas, apply its reviewed migrations, and create/read/write/drop precisely owned technical fixtures and journal metadata. No superuser, database-drop, role-management, service-control, or access to production databases. Runtime credentials remain separate and need no new privileges. |
+| Configuration | Root `.env` has `DATABASE_URL` and `TEST_DATABASE_URL`; commands select the appropriate target without substitution. Tests require test mode and a distinct normalized database identity. |
+| Transport | Local plaintext, omitted `sslmode` or `sslmode=disable`. No certificates or TLS settings. No global HTTPS verification settings are modified. |
+| Privileges | Use the owner-supplied credentials and only their necessary fixture/migration permissions. Do not change roles or grants, invoke superuser operations, drop databases, or stop services. Prefer restricted credentials for future operation; broad local credentials do not relax cleanup ownership. |
 | Secrets | Operator-supplied through the private local session/configuration, outside Git and command output. Keep credentials, certificate contents, and private file paths out of logs and completion evidence. |
 
-No new provider or operating-system-specific command is required. TLS prerequisites are requirements on a supplied environment, not permission to provision or bypass one.
-
-Alternative: a loopback plaintext test database would reduce setup work but contradict the approved test contract. Driver doubles remain useful for offline assertions, not persistence evidence.
+No new provider, dependency, provisioning, or operating-system-specific command is required. Driver doubles remain offline contract checks, not persistence evidence. The earlier TLS-only alternative was explicitly rejected by the owner for this local workflow.
 
 ### 2. Exercise real migration history without rewriting its SQL
 
-Extract the small history-reading/application operation into a script-level helper shared by `scripts/migrate.cjs` and the integration runner. Keep target selection outside the helper: the operator command validates `MIGRATION_DATABASE_*`; the runner passes only the guarded `TEST_DATABASE_*` connection. Preserve the operator command's explicit configuration, safe failures, and empty-history no-connect behavior. Do not import scripts into application startup or change web/database boundaries.
+Use the script-level history helper shared by `scripts/migrate.cjs` and integration. Keep target selection outside it: ordinary migrations validate `DATABASE_*`; test-mode migration and integration paths validate only guarded `TEST_DATABASE_*`. Preserve safe failures and empty-history no-connect behavior. Do not import scripts into application startup or change web/database boundaries.
 
-For the live suite, a verified connection is still required even when the real application journal is empty. Read the actual repository history without modifying it:
+For the live suite, a real connection to the dedicated local test database is required even when the application journal is empty. Read repository history unchanged:
 
 - **Empty now:** invoke the shared operation twice; assert no application/migration-metadata DDL and no application-journal creation. Report zero application migrations. The surrounding suite's technical DDL is counted separately.
 - **Non-empty later:** apply pending repository SQL unchanged to the dedicated test application's normal schemas. Snapshot full applied migration identities/hashes and schema definitions after the first run; replay and assert both snapshots are unchanged and application statements are not reapplied. Keep those application tables and journal entries after test cleanup. The registration change must add assertions for its actual tables/constraints and run this non-empty path.
@@ -91,12 +93,12 @@ The historical waiver stays in the archive. During implementation, update curren
 | Environment | Commands / checks | Evidence and completion rule |
 | --- | --- | --- |
 | Planning only | `openspec validate enable-account-persistence-validation --strict`; `openspec validate --specs --strict`; full diff review | Valid planning structure and compatibility with current specs, never implementation or database success. |
-| No PostgreSQL | `npm run lint`; `npm run typecheck`; `npm test`; `npm run build`; `npm run test:e2e`; `npm run test:smoke` | Existing root gates plus unit/process checks for preflight-before-client, normalized target matching, test-mode requirement, TLS overrides/redaction, migration contracts, and precise cleanup error propagation. Existing browser/process foundation checks stay database-independent. |
-| Dedicated verified-TLS environment | `npm run test:integration` with the private prerequisite settings above | Required exit 0 after verified connectivity, actual empty/non-empty repository history replay, technical commit/rollback/replay/failed-migration rollback, successful/failing worker cleanup, and independent sentinel checks. |
+| No PostgreSQL | `npm run lint`; `npm run typecheck`; `npm test`; `npm run build`; `npm run test:e2e`; `npm run test:smoke` | Preflight-before-client, normalized target matching, test-mode requirement, URL validation/redaction, migration contracts, and cleanup error propagation. No `.env` loading for these commands. |
+| Dedicated local environment | `npm run test:integration` using private `.env` | Required exit 0 after actual local connectivity, actual empty/non-empty repository history replay, technical commit/rollback/replay/failed-migration rollback, successful/failing worker cleanup, and independent sentinel checks. |
 
 Offline missing-configuration child tests intentionally expect nonzero preflight; they are not a live pass. Do not mark live tasks complete until the live command actually succeeds. Record date, platform, Node/npm/PostgreSQL versions, command exits, actual application-journal coverage, cleanup/rollback results, and any remaining unverified checks without connection secrets. If prerequisites are absent, stop at an explicit incomplete live gate.
 
-Live untrusted-CA/hostname-negative handshakes, exhaustion, statement cancellation, and transport-fault recovery retain their existing requirements and unverified status; this change does not claim to have closed them or add a broad fault-injection project. Production certificate verification and all existing defaults remain mandatory.
+Exhaustion, statement cancellation, and transport-fault recovery retain their unverified status unless executed separately; no broad fault-injection project is added. TLS handshake requirements are superseded by the owner's explicit local transport revision, never represented as passed tests.
 
 ### 6. Preserve the approved milestone boundaries
 
@@ -110,7 +112,7 @@ Carry these approved constraints into the later proposals, without implementing 
 
 ## Risks / Trade-offs
 
-- **The database has not been supplied** -> Planning can be approved, but live implementation acceptance remains blocked until actual prerequisites and a passing run exist. No synthetic success or inherited waiver.
+- **Connection settings do not prove a successful database run** -> Verify actual connectivity, privileges, cleanup, and live assertions before completion; no inherited waiver or simulated success.
 - **Target identity comparison is not proof of physical isolation** -> Require deliberate operator selection and restricted access, document alias/omission limitations, and keep destructive cleanup limited to exact ownership.
 - **Persistent test application schema accumulates approved migration history** -> Do not reset it for convenience. Use fresh separately provisioned targets for first-install verification and separate databases for concurrent jobs.
 - **Forced process termination can interrupt cleanup** -> Report run-owned resource identifiers safely for operator inspection; never automatically sweep old schemas by prefix. Normal success/failure paths must clean up; crash-proof janitorial tooling is deferred.
@@ -119,10 +121,10 @@ Carry these approved constraints into the later proposals, without implementing 
 
 ## Migration Plan
 
-There is no deployment or production schema migration in this change. After a separate implementation approval, introduce the test/script changes, run offline checks, then run the live suite only with operator-provided dedicated configuration. Preserve the operator migration command's contract and application startup behavior.
+There is no deployment or production schema migration. The owner approved implementation and the local transport revision. Run offline checks and then the actual suite against `commerce_test`; do not write to `commerce_db` from tests. Private `.env` is never modified or committed. Application startup still performs no DDL.
 
 If implementation is reverted, revert the test/tooling changes through normal Git review; do not undo test application migrations or remove existing application history automatically. Failed technical migrations are rolled back by their transaction, and only precisely owned technical fixtures are teardown candidates. Archived foundation artifacts are never rewritten.
 
 ## Open Questions
 
-- The operator may choose any PostgreSQL service/location satisfying these prerequisites. Its endpoint, credentials, trusted CA path, and actual PostgreSQL version are environment inputs to record privately before live execution, not grounds to change this design.
+- The actual local PostgreSQL version and permissions are measured during execution without printing credentials. Remote hosting transport remains a future deployment decision.

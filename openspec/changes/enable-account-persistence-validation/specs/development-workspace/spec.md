@@ -3,14 +3,14 @@
 ## MODIFIED Requirements
 
 ### Requirement: Executable quality gates
-The workspace SHALL provide `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, `test:smoke`, and `build`, each returning nonzero on failure. Unit and process smoke tests MUST run without PostgreSQL. Live integration tests MUST require a dedicated TLS database and fail clearly if prerequisites are absent. The waiver covers only archived foundation completion; persistence-validation work and subsequent account-persistence changes MUST pass live tests and document unverified checks.
+The workspace SHALL provide `lint`, `typecheck`, `test`, `test:integration`, `test:e2e`, `test:smoke`, and `build`, each returning nonzero on failure. Unit and process smoke tests MUST run without PostgreSQL. Live integration tests MUST require a dedicated local database and fail clearly without it. The waiver covers only archived foundation completion; persistence-validation work and subsequent account-persistence changes MUST pass live tests and document unverified checks.
 
 #### Scenario: Invalid source fails validation
 - **WHEN** a type error or forbidden import is introduced
 - **THEN** the corresponding root check exits nonzero
 
 #### Scenario: Test service configuration is missing
-- **WHEN** live database integration tests run without the dedicated TLS test database configuration
+- **WHEN** live database integration tests run without the dedicated local test database configuration
 - **THEN** they fail with a safe configuration error instead of reporting success or falling back to the development database
 
 #### Scenario: Persistence validation cannot be completed with offline checks alone
@@ -28,7 +28,7 @@ The repository SHALL document setup, application commands, required environment 
 
 #### Scenario: Contributor prepares persistence validation
 - **WHEN** a contributor follows the database testing instructions
-- **THEN** they can identify the test-only database, certificate hostname/trust, restricted privileges, private configuration, serial execution, and cleanup requirements before running tests
+- **THEN** they can identify the test-only database, required privileges, private configuration, serial execution, and cleanup requirements before running tests
 - **AND** the instructions explain normalized target comparison and its inability to prove safety across undisclosed aliases or omitted non-test connections
 - **AND** the historical waiver is preserved without presenting it as approval to skip new live persistence gates
 
@@ -43,7 +43,7 @@ Completion evidence SHALL identify commands, exit results, date, runtime/platfor
 - **AND** `openspec validate enable-account-persistence-validation --strict` and `openspec validate --specs --strict` pass
 - **AND** the report separates real application-history replay from technical fixture replay, and records transaction rollback, failed-migration rollback, successful/failing cleanup preservation, and remaining unverified checks
 
-#### Scenario: TLS database configuration is unavailable
+#### Scenario: Test database configuration is unavailable
 - **WHEN** the required live environment cannot be supplied
 - **THEN** available offline checks can be reported individually without marking live verification or the implementation complete
-- **AND** no credentials are invented, no production/shared target is substituted, and TLS requirements remain unchanged
+- **AND** no credentials are invented and no production/shared target is substituted

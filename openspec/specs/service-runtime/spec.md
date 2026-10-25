@@ -19,8 +19,13 @@ Each process SHALL validate its required configuration before serving requests. 
 - **THEN** liveness is available and readiness returns unavailable
 
 #### Scenario: Invalid configuration domain
-- **WHEN** an environment/TLS enum, URL protocol, port range, or resource limit is invalid
+- **WHEN** an environment, URL protocol, local-host restriction, URL option, port range, or resource limit is invalid
 - **THEN** startup fails before listening and names the setting without printing its value
+
+#### Scenario: API runs in test mode
+- **WHEN** the API is configured with `NODE_ENV=test`
+- **THEN** it selects guarded `TEST_DATABASE_URL` and never substitutes `DATABASE_URL`
+- **AND** a missing or matching development target fails before any client exists
 
 ### Requirement: Separate health probes
 The API SHALL expose `GET /health/live` and `GET /health/ready`. Liveness MUST return HTTP 200 while the HTTP process can serve requests, independently of database availability. Readiness MUST return HTTP 200 only when the database check succeeds and shutdown has not begun; otherwise it MUST return HTTP 503. Probe responses MUST use `Cache-Control: no-store` and disclose no infrastructure details.
@@ -97,6 +102,6 @@ On a supported shutdown signal, the API SHALL stop accepting new application wor
 The API SHALL start on independently configured ports without requiring sticky routing, local persistent files, or in-memory authoritative application state. Resource configuration MUST apply per process. Deployment documentation MUST distinguish this foundation property from proven production capacity.
 
 #### Scenario: Two API processes during a database outage
-- **WHEN** the production-smoke runner starts two API processes on separate ports with valid verified-TLS configuration pointing at a test-owned unavailable endpoint
+- **WHEN** the production-smoke runner starts two API processes on separate ports with valid local plaintext configuration pointing at a test-owned unavailable endpoint
 - **THEN** both independently report liveness 200 and readiness 503
 - **AND** restarting one does not prevent the other from serving its probes

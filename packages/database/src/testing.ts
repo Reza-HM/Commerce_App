@@ -2,8 +2,8 @@ import {ConfigurationError, readDatabaseConfiguration} from './configuration';
 import type {DatabaseConfiguration, Environment} from './configuration';
 
 export function guardedTestConfiguration(env: Environment): DatabaseConfiguration {
+  if (env.NODE_ENV !== 'test') throw new ConfigurationError('NODE_ENV');
   const test = readDatabaseConfiguration(env, 'TEST_DATABASE');
-  if (test.connection.ssl === false) throw new ConfigurationError('TEST_DATABASE_TLS_MODE');
   for (const prefix of ['DATABASE', 'MIGRATION_DATABASE'] as const) {
     if (!env[`${prefix}_URL`]) continue;
     const other = readDatabaseConfiguration(env, prefix);

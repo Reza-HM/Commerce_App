@@ -22,9 +22,10 @@ npm run test:e2e
 npm run test:smoke
 ```
 
-Set environment variables in your private session or a local environment loader;
-the application does not automatically read `.env` files. Never commit secrets,
-environment files, dependency folders, generated output or test reports.
+Database commands and API development load database settings from the ignored
+root `.env`; other commands use explicit process configuration as detailed below.
+Never commit secrets, environment files, dependency folders, generated output,
+or test reports.
 In separate terminals run `npm run dev:web` and `npm run dev:api`. After a build,
 use `npm run start:web` and `npm run start:api`. Web defaults to port 3000, API to
 3001 (loopback). Rendering the web needs no API or database. Valid API configuration
@@ -59,99 +60,158 @@ dependencies; the expected warning and flag are test-only.
 ## Configuration
 
 Validation happens before listening/connecting. Diagnostics name settings, never
-values, credentials, URLs or CA paths. Web configuration exports no server values.
+values, credentials, URLs, or private file paths. Web exports no server values.
 
 | Setting | Default / rule |
 | --- | --- |
-| `NODE_ENV` | Required: development, test, production |
-| `DATABASE_URL` | Required postgres/postgresql URL: user, host, database |
-| `DATABASE_TLS_MODE` | verify-full; local only for non-production loopback |
-| `DATABASE_CA_FILE` | Optional PEM CA bundle; otherwise Node default trust roots |
-| `DATABASE_POOL_MAX` | 5 per process |
-| `DATABASE_ACQUIRE_TIMEOUT_MS` | 1000; effective maximum 1000 ms protects readiness |
-| `DATABASE_STATEMENT_TIMEOUT_MS` | 5000, client query and server statement deadline |
+| `NODE_ENV` | development, test, production; database commands/API development default to development; integration sets test |
+| `DATABASE_URL` | Local development/API connection and normal explicit migrations |
+| `TEST_DATABASE_URL` | Sole execution target for live integration, API test mode, and test-mode migrations |
+| `DATABASE_POOL_MAX` / `TEST_DATABASE_POOL_MAX` | 5 per process |
+| `DATABASE_ACQUIRE_TIMEOUT_MS` / test equivalent | 1000; effective maximum 1000 ms protects readiness |
+| `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline |
 | `API_PORT` | 3001; 1–65535 |
-| `WEB_ORIGINS` | Empty; otherwise comma-separated exact HTTP(S) origins |
+| `WEB_ORIGINS` | Empty; otherwise exact HTTP(S) origins |
 | `API_BODY_LIMIT_BYTES` | 1048576 (1 MiB) |
 | `API_HEADER_LIMIT_BYTES` | 16384 (16 KiB) |
 | `API_HEADER_TIMEOUT_MS` | 5000; no greater than request timeout |
 | `API_REQUEST_TIMEOUT_MS` | 10000 |
 | `API_SHUTDOWN_TIMEOUT_MS` | 10000 |
 
-Database variables accept `MIGRATION_DATABASE_` or `TEST_DATABASE_` prefixes for
-their separate commands, with no runtime URL fallback. Limits are positive finite
-decimal integers. URLs reject queries/fragments, including TLS overrides. Parsed
-explicit options keep TLS authoritative. Never set `NODE_TLS_REJECT_UNAUTHORIZED=0`.
-Production always requires `rejectUnauthorized: true`. Missing/malformed CA files
-fail configuration; valid-but-untrusted CA/hostname failures happen on connection
-and make readiness unavailable. Unit options tests do not prove a TLS handshake.
+On 2026-10-25 the owner explicitly removed database TLS requirements and supplied
+`commerce_db` and `commerce_test` on localhost:5432 in the ignored root `.env`.
+The current database workflow is **local plaintext only**, in every runtime mode.
+Loopback hostnames/addresses are allowed; omitted `sslmode` or exactly
+`sslmode=disable` are accepted. Other URL options, duplicate options, fragments,
+and remote hosts are rejected. No CA or TLS-mode settings are needed; obsolete
+explicit settings fail validation rather than suggesting encryption is enabled.
+Global HTTPS verification is never disabled. Remote commercial hosting and its
+transport policy need a later design decision.
 
-Local development uses `NODE_ENV=development`, `DATABASE_TLS_MODE=local`, and a
-loopback URL such as `postgresql://local_user:placeholder@localhost:5432/commerce_dev`
-in your private session. This is a syntax example, not a provisioned credential.
+Root `test:integration`, `db:migrate`, and `dev:api` commands load only recognized
+database settings from `.env`, using Node's built-in parser. Existing process
+values win, including empty settings that must fail validation. Integration sets
+`NODE_ENV=test`; a test-mode API/migration must use guarded `TEST_DATABASE_URL`.
+Unit, build, type-check, browser, and process-smoke commands do not load this file.
+Normal API production startup still uses explicit process configuration. Never
+commit `.env`, paste credentials into commands, or include secret values in logs.
 
 ## Database lifecycle and migrations
 
-Nest owns one lazy pool per process, never one per request. Limits bound pool
-size, acquisition and statements. Background errors emit safe classifications;
-pg removes failed idle clients. Readiness coalesces work, does not cache completed
-results, and discards timed-out clients. No probe changes session settings.
-Transactions commit on success, roll back on error, release connections, and
-discard clients if rollback fails. Use least-privilege runtime DML credentials
-and separate schema-changing migration credentials. User/server provisioning is
-outside this change.
+Nest owns one lazy bounded pool per process, never one per request. Background
+errors emit safe classifications; failed idle clients are removed. Readiness
+coalesces requests, does not cache completed results, and discards timed-out
+clients. Transactions commit on success, roll back on error, release connections,
+and discard clients on failed rollback. Provisioning and role/grant changes are
+outside this change. Use only necessary fixture/migration permissions; restricted
+runtime and migration credentials remain a future operational responsibility.
 
 ```text
 npm run db:generate
 npm run db:migrate
-```
-
-Generation reads the empty `packages/database/src/schema.ts`. Review generated
-SQL/metadata before future commits. With no schema changes/migrations, commands
-report no work; migration execution does not connect or create tables, but still
-validates explicit `MIGRATION_DATABASE_URL` and TLS settings. Once migrations
-exist, Drizzle applies versioned history. Run once as an operator action, outside
-API startup/replication. No schema sync, automatic migration/reset/rollback exists.
-
-## Owner-approved database test exception
-
-On **2026-10-23** the owner waived a dedicated TLS test database as a completion
-gate. None is available. Unit tests use injected driver doubles. Production
-`test:smoke` children use valid verified-TLS configuration with a test-owned
-unavailable TCP endpoint, asserting live 200 and ready 503. Healthy readiness is
-injected only in unit tests; production has no fake healthy-database mode.
-
-The optional command remains strict:
-
-```text
 npm run test:integration
 ```
 
-An operator must supply an independently provisioned dedicated PostgreSQL database,
-`NODE_ENV=test`, `TEST_DATABASE_URL` using the certificate hostname,
-`TEST_DATABASE_TLS_MODE=verify-full`, and `TEST_DATABASE_CA_FILE` if default trust
-roots are insufficient. Synthetic URL shape:
-`postgresql://test_user:placeholder@db.test.example:5432/commerce_test`.
-Credentials need CONNECT, CREATE SCHEMA and rights to create/use/drop their own
-fixture tables/metadata, without superuser or service-control permissions.
-Supply applicable development/migration URLs as well: preflight rejects matching
-parsed host/port/database despite different credentials, encoding or default port
-formatting. It cannot establish safety across undisclosed DNS aliases or omitted
-non-test URLs; selecting a genuinely distinct database is the operator's duty.
+Generation reads the currently empty `packages/database/src/schema.ts`. Review
+SQL/metadata before future commits. Normal migrations use `DATABASE_URL`;
+`NODE_ENV=test` migrations use guarded `TEST_DATABASE_URL`, never development.
+No third URL is required. An optional legacy migration URL is a target-comparison
+input only, never an execution fallback. Startup never creates/synchronizes
+schemas. Empty application history validates configuration, then reports no work
+without connecting or creating migration metadata. History length is not a count
+of pending entries. There are no automatic down-migrations or database resets.
 
-Guarding precedes clients/writes. The suite checks connectivity, then creates one
-random `foundation_<uuid>` schema for rollback/migration replay. Cleanup drops
-only that schema, never an arbitrary database. Interrupted processes can leave
-named fixtures for manual review. Never stop shared services, change global
-settings, disable TLS or terminate unrelated sessions. Missing configuration
-returns nonzero, not a skipped/passing suite.
+The shared `scripts/migration-history.cjs` is used by normal migrations and live
+tests. Integration applies the unchanged repository history twice. Empty history
+must execute no application/journal DDL. Non-empty history must preserve complete
+journal identities/hashes and catalog definitions on replay, with no repeated
+application statements. Applied application tables/history remain in the test
+database; fixture teardown never owns them. The first account migration needs
+fresh-install and non-empty replay assertions in its own change. Current empty
+history does not prove account persistence.
 
-**Unverified:** PostgreSQL connectivity/permissions/version, trusted/untrusted
-CA and hostname handshakes, live pool exhaustion/idle recovery, server statement
-cancellation, transaction rollback, migration replay and fixture cleanup. The
-live suite provides connectivity/rollback/replay coverage; live TLS-negative and
-fault-injection extensions remain follow-up work. Driver doubles establish
-contracts, not live PostgreSQL correctness. Revisit before commercial use.
+## Persistence test isolation and historical waiver
+
+The 2026-10-23 waiver applied only to archived foundation completion. The owner's
+2026-10-25 local transport revision supersedes its former TLS setup prerequisites;
+it does not waive actual database verification for this or later account changes.
+Archived foundation files remain unchanged historical evidence.
+
+The root live integration command connects only to `TEST_DATABASE_URL`. Before
+constructing any client, it requires test mode, validates the URL/options, and
+rejects identities matching configured development or legacy migration targets.
+Comparison normalizes host case/trailing dots, common loopback aliases, decoded
+database names, and default ports; credentials do not make the same database safe.
+It cannot prove isolation across undisclosed aliases or omitted non-test URLs.
+Missing configuration fails nonzero, never skips, invents credentials, or falls
+back. Run one migration/suite owner at a time per test database; use separate
+databases for parallel jobs.
+
+The supplied role must be able to connect, create/use schemas, apply reviewed
+application migrations, and create/read/write/drop precisely owned fixtures and
+metadata. The suite never changes roles/grants, invokes database-drop or
+service-control operations, or terminates unrelated sessions. No production/shared
+database is an acceptable target. No test connects to `commerce_db`.
+
+Live coverage has separate phases:
+
+1. Real application history replay, explicitly distinguishing the empty no-op.
+2. Coordinator-owned sentinel rows and schema definitions, outside each worker's
+   ownership set. Successful and deliberately failing workers commit fixtures,
+   clean their own resources, and are independently checked for fixture absence
+   and exact sentinel preservation. Only then is the coordinator sentinel removed.
+3. Technical committed/rolled-back transactions and migration replay. A failing
+   migration executes valid insert/DDL statements before invalid SQL; both effects
+   and its journal entry must roll back while prior state survives. A controlled
+   child must exit nonzero for the expected SQL failure, followed by fresh reads.
+
+Cleanup uses generated identifiers and explicit object/record manifests, exact
+parameter-bound keys, dependency order, and restrictive schema drops. Unknown
+contents or outside dependencies fail safely. Never truncate/reset a database,
+sweep schemas by prefix, delete application history, or broaden into unowned
+cascades. Test SQL lives in registered temporary directories, cleaned by exact
+file removal and restrictive directory removal, never recursive deletion. A
+cleanup failure remains a failure even after an expected worker error. Failed
+preservation leaves the coordinator sentinel for explicit operator review.
+
+Record intent is registered before insertion and confirmed only after successful
+creation. Failed, conflicting, or uncertain inserts do not authorize deletion of
+an existing record; unconfirmed cleanup fails for explicit review.
+
+Forced termination can leave named fixtures for manual inspection. Never remove
+unknown objects or stop shared PostgreSQL services to simulate failure. Coordinator
+and migration-failure child each own one bounded pool (default maximum five);
+reserve at most ten suite connections plus ordinary operational headroom. The
+normal cleanup path releases/closes owned connections and removes technical
+fixtures only. Pool fault recovery, exhaustion, and statement-cancellation checks
+remain unverified unless separately run; no scale/commercial-readiness claim follows.
+
+### Current validation record (2026-10-25)
+
+Windows, Node 24.20.0, npm 12.2.0, PostgreSQL 18.6. The initial complete local live
+run passed on `commerce_test`: application history zero (empty no-op), technical
+commit/rollback/replay and failed-migration rollback, expected child exit 1, and
+both successful/failing worker sentinel checks. Credentials and `.env` were not
+printed, changed, or committed. This supersedes the earlier 4/18 partial checkpoint.
+
+Final validation on this checkpoint:
+
+| Command | Result |
+| --- | --- |
+| `npm run lint` | Passed |
+| `npm run typecheck` | Passed |
+| `npm test` | Passed: 12 suites, 102 tests |
+| `npm run build` | Passed: database, API, web |
+| `npm run test:e2e` | Passed: desktop/mobile production page, headers and secret scans |
+| `npm run test:smoke` | Passed: 3 API process checks |
+| `npm run test:integration` | Passed against commerce_test with the live outcomes above |
+| `openspec validate enable-account-persistence-validation --strict` | Passed |
+| `openspec validate --specs --strict` | Passed: 3 current main specs |
+
+All revised persistence-validation tasks are complete. Non-empty account migration
+coverage belongs to the first migration-bearing feature; remaining pool-fault,
+native Linux, and commercial workload checks are not claimed. No authentication
+or other business functionality was introduced.
 
 ## HTTP and shutdown
 

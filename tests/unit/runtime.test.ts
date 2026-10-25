@@ -4,7 +4,7 @@ import {readApiConfiguration} from '../../apps/api/src/configuration';
 import {createRuntime} from '../../apps/api/src/runtime';
 import type {OperationalEvent} from '../../apps/api/src/runtime';
 
-const env={NODE_ENV:'test',DATABASE_URL:'postgres://user:secret@localhost/db',DATABASE_TLS_MODE:'local',WEB_ORIGINS:'https://shop.example'};
+const env={NODE_ENV:'test',DATABASE_URL:'postgres://user:secret@localhost/db',TEST_DATABASE_URL:'postgres://user:secret@localhost/runtime_test',WEB_ORIGINS:'https://shop.example'};
 async function harness(settings: Record<string,string>={}) {
   const database={ready:jest.fn().mockResolvedValue(true),close:jest.fn().mockResolvedValue(undefined)};
   const logs:OperationalEvent[]=[];

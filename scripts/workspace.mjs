@@ -1,9 +1,11 @@
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const npmCli = process.env.npm_execpath;
 const command = process.argv[2];
+const {commandEnvironment} = createRequire(import.meta.url)('./database-environment.cjs');
 const databaseBuild = ['run', 'build', '--workspace', '@commerce/database'];
 const commands = {
   typecheck: [databaseBuild, ['exec', '--workspace', '@commerce/web', '--', 'next', 'typegen'], ['run', 'typecheck', '--workspaces'], ['exec', '--', 'tsc', '--project', 'tsconfig.test.json', '--noEmit']],
@@ -21,12 +23,16 @@ if (!npmCli || !Object.hasOwn(commands, command)) {
   process.exit(1);
 }
 
+let childEnvironment = process.env;
+try { childEnvironment = commandEnvironment(command); }
+catch { console.error('Invalid local database environment'); process.exit(1); }
+
 function run(args, label) {
   const result = spawnSync(process.execPath, args, {
     cwd: root,
     stdio: 'inherit',
     shell: false,
-    env: {...process.env, NEXT_TELEMETRY_DISABLED: '1', ...(command === 'test:e2e' ? {DATABASE_URL: 'web-build-private-sentinel', PRIVATE_SENTINEL: 'web-build-private-sentinel'} : {})}
+    env: {...childEnvironment, NEXT_TELEMETRY_DISABLED: '1', ...(command === 'test:e2e' ? {DATABASE_URL: 'web-build-private-sentinel', PRIVATE_SENTINEL: 'web-build-private-sentinel'} : {})}
   });
   if (result.error || result.status !== 0) {
     console.error(`Workspace step failed: ${label}`);

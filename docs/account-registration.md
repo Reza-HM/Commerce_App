@@ -233,3 +233,7 @@ Purpose/scenarios preserved. The five change artifacts, including `.openspec.yam
 were archived unchanged at
 `openspec/changes/archive/2026-10-26-add-account-registration/` and verified against
 their pre-move content hashes. No active registration change remains.
+
+The owner also established automatic helper-based PR delivery for approved work.
+Current `AGENTS.md`, GitHub delivery instructions/specification govern that standing
+authorization; older archived approval wording remains a historical record.

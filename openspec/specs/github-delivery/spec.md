@@ -43,17 +43,22 @@ CI SHALL use read-only repository access and no application secrets or repositor
 - **THEN** it exits with an actionable prerequisite error without exposing credentials or attempting to install or authenticate tools automatically
 
 ### Requirement: Explicit action authorization
-Delivery SHALL preserve separate authorization for pushing, PR creation, and merging. Before acting, the assistant MUST show the relevant branch and commits, PR title/body, and merge target. One explicit instruction can authorize those named actions together. Opening approval alone MUST NOT authorize merging. Authorization MUST NOT transfer to another PR or a changed head commit.
+Owner-approved implementation SHALL authorize feature-branch publishing, PR creation, and checked merging under the standing project policy, without repeated delivery prompts. The assistant MUST announce the branch/commits, PR metadata, and merge target, and record the current full head. Explicit scope/revision limits MUST prevail. Each changed head/base MUST receive fresh validation and a new head-specific helper invocation; unrelated PRs remain outside this authorization.
 
 #### Scenario: The owner authorizes the complete delivery
-- **WHEN** the owner explicitly authorizes publishing the reviewed branch, opening the displayed PR, and merging its named head after successful checks
-- **THEN** the assistant can perform those named actions and wait for CI without asking for the same authorization again
+- **WHEN** the owner approves implementation and the standing automatic-delivery policy applies
+- **THEN** the assistant announces and performs feature-branch publishing, PR opening, required checks, and conditional merging without separate confirmations
 - **AND** it reports the PR link and confirmed merge result
 
 #### Scenario: New commits arrive after merge authorization
-- **WHEN** the authorized PR head changes before merge
-- **THEN** automated merging stops and the new head requires a fresh review and explicit merge instruction
-- **AND** no persistent merge authorization is left enabled
+- **WHEN** an assistant-authored fix within the approved scope changes the PR head before merge
+- **THEN** the previous helper invocation stops and the assistant validates/publishes the fix and starts a fresh invocation for the recorded current full head without another delivery prompt
+- **AND** old check evidence cannot authorize the new head and no native deferred auto-merge is armed
+
+#### Scenario: The owner limits delivery or unexpected scope appears
+- **WHEN** the owner specifies local-only, draft-only, stop-before-merge, or a limited revision, or unexpected/out-of-scope commits appear
+- **THEN** the assistant honors those limits and obtains any missing authorization before proceeding
+- **AND** it does not transfer approval to unrelated PRs, bypass checks, or broaden implementation scope
 
 ### Requirement: Repeatable pull request opening
 The opening helper SHALL use an explicit repository, `main` base, published feature branch, expected full head SHA, and supplied Conventional Commit title and body file. It MUST require a clean working tree and matching local/remote heads, create at most one matching open PR, and return its URL. It MUST NOT push, fork, rewrite history, or silently edit an existing PR.

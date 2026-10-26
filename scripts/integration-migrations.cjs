@@ -12,9 +12,15 @@ async function capture(database, operation) {
 function assertAccountSchema(snapshot) {
   const accounts = snapshot.find(row => row.schema === 'public' && row.name === 'accounts');
   const passwords = snapshot.find(row => row.schema === 'public' && row.name === 'account_passwords');
-  assert.ok(accounts && passwords, 'Account migration tables missing');
+  const sessions = snapshot.find(row => row.schema === 'public' && row.name === 'account_sessions');
+  assert.ok(accounts && passwords && sessions, 'Account migration tables missing');
   assert.equal(accounts.columns.length, 4, 'Unexpected account columns');
   assert.equal(passwords.columns.length, 2, 'Unexpected credential columns');
+  assert.equal(sessions.columns.length, 7, 'Unexpected session columns');
+  for (const name of ['account_sessions_pkey', 'account_sessions_token_digest_key', 'account_sessions_digest_check', 'account_sessions_expiry_check', 'account_sessions_activity_check']) {
+    assert.ok(sessions.constraints.some(value => value.startsWith(name + ':')), 'Session constraint missing');
+  }
+  assert.ok(sessions.constraints.some(value => value.includes('FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT')), 'Session FK missing');
   for (const name of ['accounts_pkey', 'accounts_email_normalized_key', 'accounts_email_canonical_check']) {
     assert.ok(accounts.constraints.some(value => value.startsWith(name + ':')), 'Account constraint missing');
   }

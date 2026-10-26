@@ -3,7 +3,7 @@
   "info": {
     "title": "Commerce_App HTTP API",
     "version": "0.1.0",
-    "description": "Current local NestJS services: health probes and email/password registration. No sessions/sign-in, verification, recovery or account browser flow exists. All documented operations are unauthenticated. Responses reaching application middleware include server-generated X-Request-Id and nosniff; probes, registration and application errors are no-store. JSON bodies default to a 1 MiB limit; compressed bodies are unsupported. Lower-level header/receive failures may terminate the connection or return non-JSON 408/431 without application headers. See the repository docs/api/README.md for setup, CORS/preflight, examples and detailed semantics. This document describes current behavior, not public deployment readiness."
+    "description": "Current local NestJS services: health probes, registration and account sessions. Verification, recovery and account browser flow are not implemented. Responses reaching application middleware include server-generated X-Request-Id and nosniff; probes, registration and application errors are no-store. JSON bodies default to a 1 MiB limit; compressed bodies are unsupported. Lower-level header/receive failures may terminate the connection or return non-JSON 408/431 without application headers. See the repository docs/api/README.md for setup, CORS/preflight, examples and detailed semantics. This document describes current behavior, not public deployment readiness."
   },
   "servers": [
     {
@@ -19,7 +19,7 @@
     },
     {
       "name": "Accounts",
-      "description": "Unverified ordinary account registration only."
+      "description": "Ordinary account registration and sessions."
     }
   ],
   "paths": {
@@ -245,6 +245,539 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/accounts/sessions": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "operationId": "createAccountSession",
+        "summary": "Sign in",
+        "description": "Allows unverified accounts in this local milestone. Unknown and incorrect credentials return the same 401. Five parsed attempts per direct peer per 60 seconds, 1024 peer buckets; shares two password-work slots with registration. Send the required header and an allowed Origin when present.",
+        "parameters": [
+          {
+            "name": "X-Commerce-Request",
+            "in": "header",
+            "required": true,
+            "description": "Must equal 1; required on every session endpoint.",
+            "schema": {
+              "type": "string",
+              "const": "1"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Same canonical email identity as registration."
+                  },
+                  "password": {
+                    "type": "string",
+                    "writeOnly": true,
+                    "description": "Well-formed Unicode, at most 1024 UTF-8 bytes, normalized to NFC. Existing credentials are verified without reapplying registration password policy."
+                  }
+                }
+              },
+              "example": {
+                "email": "reader@example.com",
+                "password": "Synthetic docs passphrase 628!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Session created.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              },
+              "Set-Cookie": {
+                "description": "Host-only session cookie with Secure, HttpOnly, SameSite=Strict and Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "const": "signed_in"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input or JSON.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted origin or missing request header.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/accounts/sessions/current": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "operationId": "getCurrentAccountSession",
+        "summary": "Inspect and renew current session",
+        "description": "Expires after 30 minutes of inactivity or 12 hours after issuance, whichever comes first. Requires the custom header and allowed Origin when present.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Commerce-Request",
+            "in": "header",
+            "required": true,
+            "description": "Must equal 1; required on every session endpoint.",
+            "schema": {
+              "type": "string",
+              "const": "1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current account.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "status",
+                    "accountId"
+                  ],
+                  "properties": {
+                    "status": {
+                      "const": "signed_in"
+                    },
+                    "accountId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input or JSON.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid session.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted origin or missing request header.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Accounts"
+        ],
+        "operationId": "deleteCurrentAccountSession",
+        "summary": "Sign out",
+        "description": "Revokes only the presented session and clears the cookie. Returns 503 if revocation cannot be determined.",
+        "security": [
+          {
+            "sessionCookie": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "X-Commerce-Request",
+            "in": "header",
+            "required": true,
+            "description": "Must equal 1; required on every session endpoint.",
+            "schema": {
+              "type": "string",
+              "const": "1"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session revoked or absent.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              },
+              "Set-Cookie": {
+                "description": "Host-only session cookie with Secure, HttpOnly, SameSite=Strict and Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input or JSON.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted origin or missing request header.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "message",
+                    "requestId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
           },
           "500": {
             "$ref": "#/components/responses/InternalError"
@@ -675,6 +1208,14 @@
             }
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-commerce_session",
+        "description": "Opaque Secure, HttpOnly, host-only session cookie."
       }
     }
   }

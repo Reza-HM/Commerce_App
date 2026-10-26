@@ -49,17 +49,20 @@ with `npm run dev:api`. Account tables must be installed through the explicit
 | GET | `/health/live` | None | 200 `{"status":"ok"}` | None; no dependency check |
 | GET | `/health/ready` | None | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}` | Bounded database probe |
 | POST | `/accounts/register` | None | 202 `{"status":"accepted","message":"Registration request processed."}` | Atomically creates an unverified account/credential if absent |
+| POST | `/accounts/sessions` | Email and password | 201 | Creates a session cookie |
+| GET | `/accounts/sessions/current` | Session cookie | 200 or 401 | Inspects and renews a session |
+| DELETE | `/accounts/sessions/current` | Optional session cookie | 204 | Revokes the presented session |
 
 Canonical paths are shown. Express also accepts case/trailing-slash aliases and
 implicitly handles HEAD for GET routes. Global OPTIONS requests without a body
 return 204. With an exactly allowed `Origin`, CORS permits GET, POST, OPTIONS and
 the `Content-Type` request header. An unapproved origin receives no CORS grant;
-this does not authenticate clients or prevent non-browser requests. No credentialed
-CORS or exposed custom response headers are configured.
+this does not authenticate clients or prevent non-browser requests. Session routes
+add credentialed CORS, DELETE and the `X-Commerce-Request` header for allowed origins.
 
 ## Shared HTTP behavior
 
-- The API listens on loopback. No authentication/session system exists yet.
+- The API listens on loopback and supports cookie-backed account sessions.
 - Application responses include a server-generated UUID `X-Request-Id` and
   `X-Content-Type-Options: nosniff`. Probes, registration and application errors
   use `Cache-Control: no-store`. A caller-supplied ID is not trusted or echoed.
@@ -177,10 +180,32 @@ Only two hashing/persistence operations run concurrently, without a waiting queu
 slots are retained until work settles, even after disconnect. Restart resets peer
 budgets and replicas multiply them; these limits are not shared production protection.
 
-Sessions/sign-in, account web flow, verification/email delivery and password
-recovery are separate future changes, not available endpoints. Registration does
+Account web flow, verification/email delivery and password recovery are separate
+future changes, not available endpoints. Registration does
 not grant admin/business approval. See [account registration](../account-registration.md)
 for hashing, migrations, database safeguards, lifecycle and validation evidence.
+
+## Account sessions
+
+`POST /accounts/sessions` accepts an email and password and returns
+`{"status":"signed_in"}` with a host-only Secure, HttpOnly, SameSite=Strict
+cookie. Unverified accounts can sign in during this local milestone. Sessions
+expire after 30 minutes without authenticated activity or 12 hours after issue,
+whichever comes first. `GET /accounts/sessions/current` returns the account ID
+and renews activity; `DELETE /accounts/sessions/current` revokes the presented
+session and clears the cookie. Other sessions remain valid.
+
+All three requests require `X-Commerce-Request: 1`. A present Origin must match
+an exact configured `WEB_ORIGINS` entry. Credentialed browser requests require a
+trusted origin and same-site cookie context. Secure cookie behavior on local HTTP
+depends on the browser and host; do not disable Secure for development. The browser
+test uses Chromium with the web origin `http://127.0.0.1:4173` and the API on
+`http://127.0.0.1` at a separate port, with that web origin in `WEB_ORIGINS`.
+Unknown accounts and incorrect passwords return the same generic 401. Sign-in admits five
+parsed attempts per direct peer per minute and shares two in-flight password work
+slots with registration. Expired and revoked rows are not automatically deleted.
+Verification and recovery are separate prerequisites for public launch; the future
+verification change must block unverified sign-in and address existing sessions.
 
 ## Keeping documentation current
 

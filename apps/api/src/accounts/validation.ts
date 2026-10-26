@@ -52,3 +52,24 @@ export function validateRegistration(body: unknown, commonPasswords: ReadonlySet
   }
   return {emailNormalized, passwordNormalized};
 }
+
+export function validateSignIn(body: unknown): {emailNormalized: string; passwordNormalized: string} {
+  if (!body || typeof body !== 'object' || Array.isArray(body) ||
+    ![Object.prototype, null].includes(Object.getPrototypeOf(body))) throw new Error('Invalid sign-in');
+  const input = body as Record<string, unknown>;
+  if (Object.keys(input).length !== 2 || typeof input.email !== 'string' || typeof input.password !== 'string') throw new Error('Invalid sign-in');
+  const rawEmail = input.email;
+  if (Buffer.byteLength(rawEmail, 'utf8') > 1024 || /[^\x20-\x7e\t]/.test(rawEmail)) throw new Error('Invalid sign-in');
+  const emailNormalized = rawEmail.replace(/^[ \t]+|[ \t]+$/g, '').toLowerCase();
+  const parts = emailNormalized.split('@');
+  const local = parts[0] ?? '';
+  const labels = (parts[1] ?? '').split('.');
+  if (parts.length !== 2 || local.length > 64 || !localPart.test(local) || emailNormalized.length > 254 ||
+    labels.length < 2 || !labels.every(label => domainLabel.test(label))) throw new Error('Invalid sign-in');
+  if (Buffer.byteLength(input.password, 'utf8') > 1024) throw new Error('Invalid sign-in');
+  for (const scalar of input.password) {
+    const point = scalar.codePointAt(0)!;
+    if (point >= 0xd800 && point <= 0xdfff) throw new Error('Invalid sign-in');
+  }
+  return {emailNormalized, passwordNormalized: input.password.normalize('NFC')};
+}

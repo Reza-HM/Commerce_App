@@ -12,7 +12,7 @@ const commands = {
   test: [databaseBuild],
   'test:integration': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
   'test:smoke': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
-  'test:e2e': [['run', 'build', '--workspace', '@commerce/web']],
+  'test:e2e': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'build', '--workspace', '@commerce/web']],
   'db:migrate': [databaseBuild],
   build: [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'build', '--workspace', '@commerce/web']],
   'dev:api': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'dev', '--workspace', '@commerce/api']]

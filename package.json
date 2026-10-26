@@ -26,7 +26,9 @@
     "db:generate": "npm exec --workspace @commerce/database -- drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "node scripts/workspace.mjs db:migrate",
     "pr:open": "node scripts/github-delivery.cjs open",
-    "pr:merge": "node scripts/github-delivery.cjs merge"
+    "pr:merge": "node scripts/github-delivery.cjs merge",
+    "docs:api:lint": "redocly lint commerce",
+    "docs:api:build": "redocly build-docs commerce --inlineBundle --output .local/api-reference.html"
   },
   "devEngines": {
     "runtime": {
@@ -43,8 +45,11 @@
   "devDependencies": {
     "@fission-ai/openspec": "1.14.3",
     "@playwright/test": "1.64.1",
+    "@redocly/cli": "2.71.1",
     "@types/jest": "30.0.0",
     "@types/node": "24.10.1",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "eslint": "10.13.0",
     "jest": "30.5.2",
     "ts-jest": "29.4.15",

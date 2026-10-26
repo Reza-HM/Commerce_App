@@ -1,0 +1,681 @@
+{
+  "openapi": "3.1.2",
+  "info": {
+    "title": "Commerce_App HTTP API",
+    "version": "0.1.0",
+    "description": "Current local NestJS services: health probes and email/password registration. No sessions/sign-in, verification, recovery or account browser flow exists. All documented operations are unauthenticated. Responses reaching application middleware include server-generated X-Request-Id and nosniff; probes, registration and application errors are no-store. JSON bodies default to a 1 MiB limit; compressed bodies are unsupported. Lower-level header/receive failures may terminate the connection or return non-JSON 408/431 without application headers. See the repository docs/api/README.md for setup, CORS/preflight, examples and detailed semantics. This document describes current behavior, not public deployment readiness."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3001",
+      "description": "Local API default; substitute the configured API_PORT in your client."
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Liveness and bounded database readiness."
+    },
+    {
+      "name": "Accounts",
+      "description": "Unverified ordinary account registration only."
+    }
+  ],
+  "paths": {
+    "/health/live": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getLiveness",
+        "summary": "Check HTTP process liveness",
+        "description": "Independent of PostgreSQL and registration admission. No request body is needed. Remains live while the process can serve requests.",
+        "responses": {
+          "200": {
+            "description": "HTTP process is live; database availability is irrelevant.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeOk"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "operationId": "getReadiness",
+        "summary": "Check dependency readiness",
+        "description": "Fresh database probe with at most a two-second deadline including pool acquisition. Overlapping requests coalesce one active probe; completed results are not cached for later requests. Shutdown makes readiness unavailable. This does not establish account schema availability. Unexpected thrown failures use the generic 500 envelope.",
+        "responses": {
+          "200": {
+            "description": "Database probe succeeded and shutdown has not begun. This does not check account schema or migration state.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeOk"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadJson"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "description": "Database probe failed/timed out or shutdown began. This status-only body does not carry Retry-After.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeUnavailable"
+                },
+                "example": {
+                  "status": "unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts/register": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "operationId": "registerAccount",
+        "summary": "Process email/password registration",
+        "description": "Exactly email/password strings; unknown properties fail before email/password validation. Creates an unverified ordinary account and credential atomically if canonical email is absent; duplicates never replace credentials or timestamps. New and existing valid addresses both hash and return the same exact 202, without account IDs, existence flags, Location, cookie, token or email-delivery claim. SQL/network timing is not guaranteed constant. Five parsed attempts per direct socket peer per 60-second fixed window per process, at most 1024 live peer buckets; forwarded identity ignored. Field-invalid attempts consume peer budget; parser failures do not. Admission can return 429 before validation. After validation, at most two hash/persistence operations run, with no queue; saturation returns 503. A disconnect does not cancel admitted work. Restart resets peer limits; replicas multiply them.",
+        "requestBody": {
+          "required": true,
+          "description": "An uncompressed application/json object containing only email and password. Header charset parameters are supported.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationRequest"
+              },
+              "example": {
+                "email": "reader+docs@example.com",
+                "password": "Synthetic docs passphrase 628!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Request processing succeeded for a new or existing canonical email. This does not confirm creation, verification, email delivery or sign-in.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationAccepted"
+                },
+                "example": {
+                  "status": "accepted",
+                  "message": "Registration request processed."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Input shape/email/password policy failure, or an earlier JSON parser failure. Field/code exist only on validation errors.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RegistrationValidationError"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "error",
+                        "message",
+                        "requestId"
+                      ],
+                      "properties": {
+                        "error": {
+                          "const": "http_400"
+                        },
+                        "message": {
+                          "const": "Request rejected"
+                        },
+                        "requestId": {
+                          "$ref": "#/components/schemas/RequestId"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "headers": {
+      "RequestId": {
+        "description": "Server-generated correlation UUID. Caller IDs are not trusted.",
+        "schema": {
+          "$ref": "#/components/schemas/RequestId"
+        }
+      },
+      "NoSniff": {
+        "description": "Disable MIME sniffing.",
+        "schema": {
+          "type": "string",
+          "const": "nosniff"
+        }
+      },
+      "NoStore": {
+        "description": "Do not cache the response.",
+        "schema": {
+          "type": "string",
+          "const": "no-store"
+        }
+      },
+      "RetrySeconds": {
+        "description": "Positive integer delay in seconds until this peer's window or the earliest live-peer bucket expires.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "example": "60"
+      },
+      "RetryOne": {
+        "description": "Retry delay in seconds; fixed at 1 for generic 503.",
+        "schema": {
+          "type": "string",
+          "const": "1"
+        }
+      }
+    },
+    "schemas": {
+      "RequestId": {
+        "type": "string",
+        "format": "uuid",
+        "example": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+      },
+      "ProbeOk": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "ok"
+          }
+        }
+      },
+      "ProbeUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "unavailable"
+          }
+        }
+      },
+      "RegistrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Raw ASCII input <=1024 UTF-8 bytes. Trim only outer SP/HTAB and lowercase entire address. Canonical address <=254 bytes; dot-atom local part <=64 bytes; domain has >=2 labels of 1-63 alphanumeric/hyphen characters with alphanumeric ends. Reject controls, internal whitespace, Unicode, quoted local parts, domain literals and trailing domain dot. Dots/+ suffixes preserved; no DNS/provider rewrite. Deliberately no raw JSON Schema email format: outer space/tab is accepted and normalization precedes syntax validation."
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true,
+            "description": "Well-formed Unicode, <=1024 raw UTF-8 bytes; NFC normalization then 15-128 Unicode code points. No trimming, truncation or composition rules; spaces and case are significant. Whole NFC/lowercase matches against the pinned local common-password corpus, submitted canonical email/local part, commerceapp12345, commerce_app12345 and commerce-app12345 are rejected. Screening folds case, hashing preserves it. Raw minLength/maxLength are deliberately omitted: pre-normalization schema lengths would misrepresent the normalized server policy."
+          }
+        }
+      },
+      "RegistrationAccepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "const": "accepted"
+          },
+          "message": {
+            "const": "Registration request processed."
+          }
+        }
+      },
+      "RegistrationValidationError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "message",
+          "field",
+          "code",
+          "requestId"
+        ],
+        "properties": {
+          "error": {
+            "const": "invalid_registration"
+          },
+          "message": {
+            "const": "Invalid registration request"
+          },
+          "field": {
+            "type": "string",
+            "enum": [
+              "body",
+              "email",
+              "password"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "required",
+              "invalid_type",
+              "invalid_body",
+              "unexpected_field",
+              "invalid_email",
+              "password_encoding",
+              "password_too_large",
+              "password_length",
+              "password_blocklisted"
+            ]
+          },
+          "requestId": {
+            "$ref": "#/components/schemas/RequestId"
+          }
+        },
+        "example": {
+          "error": "invalid_registration",
+          "message": "Invalid registration request",
+          "field": "password",
+          "code": "password_length",
+          "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+        }
+      }
+    },
+    "responses": {
+      "BadJson": {
+        "description": "Malformed JSON, invalid JSON body encoding or parser rejection before route validation.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "http_400"
+                },
+                "message": {
+                  "const": "Request rejected"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "http_400",
+              "message": "Request rejected",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      },
+      "TooLarge": {
+        "description": "JSON body exceeds API_BODY_LIMIT_BYTES (default 1 MiB).",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "http_413"
+                },
+                "message": {
+                  "const": "Request rejected"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "http_413",
+              "message": "Request rejected",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      },
+      "UnsupportedMedia": {
+        "description": "A body uses unsupported media or content encoding. Only uncompressed application/json is supported.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "http_415"
+                },
+                "message": {
+                  "const": "Request rejected"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "http_415",
+              "message": "Request rejected",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Direct-peer fixed-window limit or live-peer map capacity reached; no hash/persistence work. Retry-After is a positive integer number of seconds.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "Retry-After": {
+            "$ref": "#/components/headers/RetrySeconds"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "http_429"
+                },
+                "message": {
+                  "const": "Request rejected"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "http_429",
+              "message": "Request rejected",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "Hash/persistence saturation, shutdown, or recognized temporary database failure/timeout/missing required account schema. No acceptance is claimed.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          },
+          "Retry-After": {
+            "$ref": "#/components/headers/RetryOne"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "http_503"
+                },
+                "message": {
+                  "const": "Request rejected"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "http_503",
+              "message": "Request rejected",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Unexpected failure; raw exception and infrastructure details are withheld.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          },
+          "X-Content-Type-Options": {
+            "$ref": "#/components/headers/NoSniff"
+          },
+          "Cache-Control": {
+            "$ref": "#/components/headers/NoStore"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "error",
+                "message",
+                "requestId"
+              ],
+              "properties": {
+                "error": {
+                  "const": "internal_error"
+                },
+                "message": {
+                  "const": "Internal server error"
+                },
+                "requestId": {
+                  "$ref": "#/components/schemas/RequestId"
+                }
+              }
+            },
+            "example": {
+              "error": "internal_error",
+              "message": "Internal server error",
+              "requestId": "3e9dc602-763b-4cb1-8ea2-77c7d66cd439"
+            }
+          }
+        }
+      }
+    }
+  }
+}

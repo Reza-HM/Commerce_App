@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && node ../../scripts/copy-api-assets.cjs",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "dev": "node --watch --enable-source-maps dist/main.js",
     "start": "node --enable-source-maps dist/main.js"

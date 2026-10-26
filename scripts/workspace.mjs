@@ -10,7 +10,7 @@ const databaseBuild = ['run', 'build', '--workspace', '@commerce/database'];
 const commands = {
   typecheck: [databaseBuild, ['exec', '--workspace', '@commerce/web', '--', 'next', 'typegen'], ['run', 'typecheck', '--workspaces'], ['exec', '--', 'tsc', '--project', 'tsconfig.test.json', '--noEmit']],
   test: [databaseBuild],
-  'test:integration': [databaseBuild],
+  'test:integration': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
   'test:smoke': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
   'test:e2e': [['run', 'build', '--workspace', '@commerce/web']],
   'db:migrate': [databaseBuild],

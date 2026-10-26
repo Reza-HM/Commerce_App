@@ -18,4 +18,39 @@
   keeping planning, implementation, validation, and archive records together.
 - Small implementation refactors that preserve specification behavior do not
   require rewriting an archived change. Update current conventions where needed.
-- These conventions do not relax the user's Git approval or safety rules.
+- The automatic delivery policy below overrides the global per-action delivery
+  approval rules; all other Git safety rules remain in force.
+
+## Automatic PR delivery
+
+The owner approved this project-specific policy on 2026-10-26:
+
+- Approval to implement a change also authorizes its normal delivery: commit
+  completed logical work, push its feature branch, open its PR, wait for the
+  required tests/reviews, and squash-merge through the existing delivery helpers.
+  Do not ask for separate push, PR-opening, or merge confirmation each time.
+- Honor narrower instructions such as planning-only, local-only, draft-only,
+  stop-before-merge, or a specifically limited revision. Ask when scope or actual
+  authorization is missing, not merely because delivery has reached its next step.
+- Before shared-state actions, announce the branch/commits, PR title/description,
+  and merge target as applicable. Record the actual PR number and full head SHA;
+  use `npm run pr:open` and `npm run pr:merge` as documented in
+  `docs/github-delivery.md`. Keep one focused feature branch/PR per change.
+- Merge only when the helpers verify the current head/base, required successful
+  `quality` and `database` CI plus any additional required checks, resolved
+  conversations/reviews, and enforced repository protection. Never count skipped,
+  stale, cancelled, ambiguous, or missing tests as success.
+- Fix failures within the approved scope through normal tested commits and let
+  new PR CI run. Such fixes do not require renewed delivery approval. A changed
+  head/base invalidates the previous helper invocation and check evidence:
+  inspect/revalidate it and use a fresh invocation with the recorded current head.
+  Unexpected or out-of-scope commits require review before proceeding.
+- Do not change the helper safety checks, CI write permissions, repository
+  protection, deployment, or secrets handling to make delivery succeed. Pipeline
+  changes still require approval of their concrete summary before committing.
+- No force push, protected-branch push, branch deletion, unmerged-PR closing,
+  published-history rewrite, hook bypass, discarded work, or Git configuration
+  changes are authorized by this policy. Reconcile uncertain mutations read-only;
+  never blindly retry a merge or arm deferred native auto-merge.
+- Report the PR link, CI result, confirmed merge commit, current branch, and any
+  remaining limitation. Retain feature branches after merging.

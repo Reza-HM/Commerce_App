@@ -12,3 +12,5 @@ export type {
 export {Database, poolOptions} from './database';
 export type {DatabaseEvent} from './database';
 export {guardedTestConfiguration} from './testing';
+export {AccountRepository} from './accounts';
+export type {NewAccount, AccountCreation, AccountRegistrationRepository} from './accounts';

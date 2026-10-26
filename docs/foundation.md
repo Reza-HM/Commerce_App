@@ -112,8 +112,8 @@ npm run db:migrate
 npm run test:integration
 ```
 
-Generation reads the currently empty `packages/database/src/schema.ts`. Review
-SQL/metadata before future commits. Normal migrations use `DATABASE_URL`;
+Generation reads `packages/database/src/schema.ts`, now containing account and
+password-credential tables. Review SQL/metadata before commits. Normal migrations use `DATABASE_URL`;
 `NODE_ENV=test` migrations use guarded `TEST_DATABASE_URL`, never development.
 No third URL is required. An optional legacy migration URL is a target-comparison
 input only, never an execution fallback. Startup never creates/synchronizes
@@ -126,9 +126,10 @@ tests. Integration applies the unchanged repository history twice. Empty history
 must execute no application/journal DDL. Non-empty history must preserve complete
 journal identities/hashes and catalog definitions on replay, with no repeated
 application statements. Applied application tables/history remain in the test
-database; fixture teardown never owns them. The first account migration needs
-fresh-install and non-empty replay assertions in its own change. Current empty
-history does not prove account persistence.
+database; fixture teardown never owns them. The first account migration now has
+fresh-install, non-empty replay, rollback, and exact-row preservation checks; see
+[account registration](account-registration.md) for current evidence. Earlier
+dated empty-history evidence below remains historical.
 
 ## Persistence test isolation and historical waiver
 
@@ -215,8 +216,10 @@ or other business functionality was introduced.
 
 ## HTTP and shutdown
 
-Only `GET /health/live` and `GET /health/ready` are application endpoints.
-Success is `{ "status": "ok" }`; unavailable readiness is HTTP 503 and
+The operational endpoints are `GET /health/live` and `GET /health/ready`.
+The API also provides `POST /accounts/register`; see its separate
+[contract and admission controls](account-registration.md). Health-probe success
+is `{ "status": "ok" }`; unavailable readiness is HTTP 503 and
 `{ "status": "unavailable" }`. Both are no-store. Liveness ignores PostgreSQL.
 Readiness has a two-second total budget including acquisition and at most one
 active check per process, with fresh checks after completion. Tests permit 500 ms
@@ -269,7 +272,7 @@ plans/indexes, job rates, p50/p95/p99 latency, acceptable errors, CPU/memory and
 connection budgets, infrastructure, and recovery objectives. Test representative
 workloads and outages after business features exist.
 
-Authentication/authorization, catalog, inventory, search, cart, checkout/payments,
+Sessions, sign-in and authorization, catalog, inventory, search, cart, checkout/payments,
 seller/admin panels, messaging, auctions, pg-boss workers, queues, Redis, object
 storage, PWA/offline, other translations and hosting remain deferred. Commercial
 operation also requires object-level access checks, rate limits, idempotency,

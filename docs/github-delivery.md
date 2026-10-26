@@ -1,10 +1,12 @@
 # GitHub delivery
 
-The delivery workflow has two operations: open a reviewed PR for an already
-published branch, then wait for checks and merge its explicitly authorized commit.
-The assistant can carry out both after one clear instruction covering the named
-push, displayed PR title/body, and exact merge head. Permission to open alone
-never permits merging. A new commit requires fresh merge authorization.
+The delivery workflow uses the owner's standing project authorization recorded
+in `AGENTS.md` on 2026-10-26. Approval to implement includes normal feature-branch
+publishing, PR opening, required CI/review checks, and conditional squash merging
+through the existing helpers. The assistant announces each shared-state action
+and records the actual PR/full head without asking for another approval at every
+step. Explicit local-only, draft-only, stop-before-merge, or revision limits take
+precedence. Planning alone does not authorize implementation or delivery.
 
 ## Prerequisites
 
@@ -23,26 +25,30 @@ Before activation, approve and configure classic `main` protection: require PRs,
 successful `quality` and `database` checks from the GitHub Actions app, a current
 base, resolved conversations, administrator enforcement, and no force pushes or
 branch deletion. Required independent approvals are zero for this solo-owner
-workflow; explicit owner review/merge instruction remains required. Preserve any
+workflow; owner authorization comes from the standing policy or a narrower
+explicit instruction. Preserve any
 additional server requirements. Squash merging must be enabled, automatic branch
 deletion disabled, and merge queues/native deferred auto-merge unused. Helpers
 inspect settings and refuse unsupported or unverifiable enforcement.
 
 ## Owner workflow
 
-1. Finish the change and its local validation. The assistant presents the commits,
-   target branch, and exact Conventional Commit PR title/description. CI pipeline
-   commits need approval of their concrete summary before committing.
-2. Explicitly authorize the desired actions. A complete instruction can say:
-   "Push this reviewed branch, open the PR with this title and description, and
-   squash-merge head `<full SHA>` once the required checks pass."
-3. Push normally with an explicit feature-branch refspec after authorization.
-   Save the reviewed PR description in an ignored UTF-8 `.local/` Markdown file.
+1. Implement the owner-approved change and finish local validation. The assistant
+   commits logical steps and presents the commits, feature branch, and exact
+   Conventional Commit PR title/description. Pipeline commits still need approval
+   of their concrete summary; this delivery policy does not waive other safety rules.
+2. Apply the standing delivery authorization without a repeated permission prompt.
+   Respect explicit limits or changed scope; ask only if required authorization is
+   actually absent. The owner can still direct a specific PR or revision separately.
+3. Push normally with an explicit feature-branch refspec. Save the reviewed PR
+   description in an ignored UTF-8 `.local/` Markdown file.
 4. Run the opening helper with the reviewed head and metadata. It returns a new
    or exactly matching existing PR URL; it never silently edits existing PR text.
-5. Run the merge helper only after explicit merge authorization. It waits in the
-   current session, checks the head/base and CI evidence, and requests an immediate
-   squash merge conditional on that head. It reports the confirmed merge commit.
+5. Record the PR number/current full head and run the merge helper under the
+   standing authorization. It waits in the current session, checks the head/base,
+   reviews/protection and CI evidence, and requests an immediate squash merge
+   conditional on that head. Report the independently confirmed result. Do not
+   enable native deferred auto-merge, bypass checks, or delete the feature branch.
 
 Commands work with the same syntax in PowerShell and a POSIX shell. Replace all
 placeholders; helpers reject missing arguments and shortened commit IDs:
@@ -90,13 +96,21 @@ or ambiguous CI evidence, lost access, and timeout stop delivery. Missing checks
 can wait until the deadline; skipped/neutral/cancelled/stale/foreign results cannot
 satisfy a mandatory gate. Additional GitHub-required checks must also succeed.
 
-Inspect the reported PR and CI run. Fix failures through normal reviewed commits
-and obtain authorization for a new head. A base-only change requires a deliberate
-update/revalidation and rerun; the helper never rebases the branch. It never
+Inspect the reported PR and CI run. Fix actual failures within approved scope
+through normal tested commits, push them, and allow new PR CI to run. No new
+delivery prompt is needed for those fixes. Inspect unexpected/out-of-scope commits
+before continuing. A changed head/base invalidates the old helper invocation and
+test evidence: deliberately update/revalidate and invoke the helper with the
+recorded current head. The helper itself never rebases the branch. It never
 reruns CI, retries a merge mutation, bypasses protection, closes an unmerged PR,
 or deletes a branch. An uncertain network response is reconciled read-only; an
 unknown outcome is reported as unknown rather than success. If opening failed,
 look up the existing PR before retrying to avoid duplicates.
+
+The standing authorization changes the assistant's approval cadence, not the
+helper's full-SHA checks, finite wait, conditional mutation, or safe refusal rules.
+Earlier dated delivery records and archived plans retain their original approval
+history; current project rules govern later delivery.
 
 ## Observed setup and validation
 

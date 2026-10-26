@@ -7,6 +7,7 @@ const {createGuardedDatabase, withCleanup, cleanupAll, sqlState} = require('./in
 const {readMigrationHistory, applyMigrationHistory} = require('./migration-history.cjs');
 const {OwnedSchema, OwnedDirectory, schemaSnapshot, journalSnapshot, relationExists} = require('./integration-fixtures.cjs');
 const {validateApplicationHistory} = require('./integration-migrations.cjs');
+const {validateAccountRepository, validateAccountSentinels, validateAccountHttp} = require('./integration-accounts.cjs');
 
 class ExpectedWorkerFailure extends Error {}
 
@@ -123,15 +124,18 @@ async function main(env = process.env) {
     assert.equal(await database.ready(), true, 'Local test database unavailable');
     const server = (await database.orm.execute('SELECT current_database() AS database, current_setting(\'server_version\') AS version')).rows[0];
     assert.equal(server.database, database.config.connection.database, 'Unexpected test database');
-    const application = await validateApplicationHistory(database, join(__dirname, '../packages/database/migrations'));
+    const application = await validateApplicationHistory(database, join(__dirname, '../packages/database/migrations'), {requireAccounts: true});
     const applicationState = await schemaSnapshot(database);
     const applicationJournal = await journalSnapshot(database);
     const sentinel = await validateSentinels(database);
     const technical = await validateTechnicalMigrations(database, env);
+    const accounts = await validateAccountRepository(database);
+    const accountSentinel = await validateAccountSentinels(database);
+    const accountHttp = await validateAccountHttp(database, env);
     assert.deepEqual(await schemaSnapshot(database), applicationState, 'Fixture cleanup changed unrelated schema state');
     assert.deepEqual(await journalSnapshot(database), applicationJournal, 'Fixture cleanup changed application migration history');
     const evidence = {date: new Date().toISOString().slice(0, 10), platform: process.platform, node: process.version,
-      postgres: server.version, database: server.database, transport: 'local plaintext', application, sentinel, technical};
+      postgres: server.version, database: server.database, transport: 'local plaintext', application, sentinel, technical, accounts, accountSentinel, accountHttp};
     console.log(JSON.stringify(evidence));
     console.log(application.empty
       ? 'Live database integration passed. Empty application history is not non-empty account migration coverage.'

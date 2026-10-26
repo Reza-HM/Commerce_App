@@ -23,11 +23,12 @@ test.each([
   expect(result.stderr).toContain('Invalid or missing configuration');
   expect(result.stderr + result.stdout).not.toMatch(/PRIVATE_VALUE|postgres:\/\/|postgresql:\/\//);
 });
-test('migration validates explicit connection and empty history does not connect',()=>{
+test('migration validates its explicit target and nonempty application history needs a connection',()=>{
   const missing=run('scripts/migrate.cjs',{});expect(missing.status).toBe(1);
   expect(missing.stderr).toContain('TEST_DATABASE_URL');
-  const empty=run('scripts/migrate.cjs',{TEST_DATABASE_URL:'postgres://fixture:secret@127.0.0.1:1/unavailable'});
-  expect(empty.status).toBe(0);expect(empty.stdout).toContain('No pending migrations');
+  const unavailable=run('scripts/migrate.cjs',{TEST_DATABASE_URL:'postgres://fixture:secret@127.0.0.1:1/unavailable'});
+  expect(unavailable.status).toBe(1);expect(unavailable.stderr).toContain('Migration failed.');
+  expect(unavailable.stderr+unavailable.stdout).not.toMatch(/secret|postgres:\/\//);
   const invalid=run('scripts/migrate.cjs',{TEST_DATABASE_URL:'invalid SECRET_VALUE'});
   expect(invalid.status).toBe(1);expect(invalid.stderr).not.toContain('SECRET_VALUE');
 });

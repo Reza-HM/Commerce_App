@@ -1,0 +1,10 @@
+apis:
+  commerce:
+    root: docs/api/openapi.json
+extends:
+  - recommended
+rules:
+  # The application is private; there is no public API license or support mailbox.
+  info-license: off
+  info-contact: off
+telemetry: off

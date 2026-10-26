@@ -21,6 +21,22 @@
 - The automatic delivery policy below overrides the global per-action delivery
   approval rules; all other Git safety rules remain in force.
 
+## API documentation
+
+- Document every added, changed, or removed HTTP API in the same PR as its
+  implementation. Keep `docs/api/openapi.json` and `docs/api/README.md` aligned
+  with the actual routes, methods, authentication, input policies, response/error
+  schemas, headers, examples, resource limits, and side effects.
+- OpenAPI is the portable HTTP contract; keep operational/design explanations in
+  the linked service guides. Document current behavior and clearly identify
+  deferred features. Use only synthetic examples and public local server URLs.
+- Run `npm run docs:api:lint`, `npm test`, and `npm run docs:api:build` for API
+  documentation changes. Route coverage and HTTP contract checks run in the
+  existing unit-test/PR quality gate; update those checks alongside API changes.
+- Keep generated HTML in ignored `.local/`, not version control. Documentation
+  tooling must not require a database, load private environment files, or add
+  public documentation routes to the application without a separate decision.
+
 ## Automatic PR delivery
 
 The owner approved this project-specific policy on 2026-10-26:

@@ -220,9 +220,16 @@ only confirmed exact fixtures; approved application tables/history remain in the
 test database. Development DATABASE_URL was not an automated execution target.
 Private configuration was not changed, printed, or committed.
 
-All current-change execution above is local Windows evidence. GitHub/Linux CI for
-this branch awaits separately authorized publication; previous changes' CI results
-are not evidence for this revision. No public deployment, workload capacity,
+At the local implementation checkpoint, execution above was Windows evidence and
+this branch's GitHub/Linux CI had not yet run; previous changes' CI results are
+not evidence for this revision. No public deployment, workload capacity,
 session, email verification, or recovery claim follows. Existing CI/deploy/secrets
 configuration and archived changes were left intact. This change is ready for
 owner review and the normal sync/archive workflow.
+
+On 2026-10-26 the owner requested finalization. All 16 tasks were complete; all 11
+account-registration requirements were synced into the current specification with
+Purpose/scenarios preserved. The five change artifacts, including `.openspec.yaml`,
+were archived unchanged at
+`openspec/changes/archive/2026-10-26-add-account-registration/` and verified against
+their pre-move content hashes. No active registration change remains.

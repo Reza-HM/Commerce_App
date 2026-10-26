@@ -57,4 +57,5 @@ export class RegistrationService {
 
   stop(): void { this.admission.stop(); }
   drain(): Promise<void> { return this.admission.drain(); }
+  acquirePasswordWork(): () => void { return this.admission.acquire(); }
 }

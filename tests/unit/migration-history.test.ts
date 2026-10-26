@@ -43,8 +43,8 @@ test('empty fixture history never creates a client or invokes migration DDL',asy
   } finally {f.close();}
 });
 
-test('repository contains the actual account migration instead of an empty history',()=>{
-  expect(readMigrationHistory(resolve('packages/database/migrations')).count).toBe(1);
+test('repository contains account and session migration history',()=>{
+  expect(readMigrationHistory(resolve('packages/database/migrations')).count).toBe(2);
 });
 
 test('missing history retains the existing no-op; malformed history fails',()=>{

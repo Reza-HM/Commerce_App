@@ -1,9 +1,12 @@
-import {Body, Controller, Inject, Module, Post, Req, Res} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Inject, Module, Post, Req, Res} from '@nestjs/common';
 import type {DynamicModule} from '@nestjs/common';
 import type {Request, Response} from 'express';
 import type {RegistrationService} from './service';
+import {sessionToken} from './sessions';
+import type {SessionService} from './sessions';
 
 const REGISTRATION = Symbol('registration');
+const SESSIONS = Symbol('sessions');
 
 @Controller('accounts')
 class AccountsController {
@@ -19,9 +22,33 @@ class AccountsController {
   }
 }
 
+@Controller('accounts/sessions')
+class SessionsController {
+  constructor(@Inject(SESSIONS) private readonly sessions: SessionService) {}
+  @Post()
+  async signIn(@Body() body: unknown, @Req() request: Request, @Res() response: Response) {
+    const {token, expires} = await this.sessions.signIn(body, request.socket.remoteAddress ?? '[unknown]');
+    if (!response.destroyed && !response.writableEnded) {
+      response.cookie('__Host-commerce_session', token, {secure: true, httpOnly: true, sameSite: 'strict', path: '/', expires});
+      response.status(201).json({status: 'signed_in'});
+    }
+  }
+  @Get('current')
+  async current(@Req() request: Request, @Res() response: Response) {
+    const accountId = await this.sessions.current(sessionToken(request.headers.cookie));
+    response.json({status: 'signed_in', accountId});
+  }
+  @Delete('current')
+  async signOut(@Req() request: Request, @Res() response: Response) {
+    response.clearCookie('__Host-commerce_session', {secure: true, httpOnly: true, sameSite: 'strict', path: '/'});
+    await this.sessions.signOut(sessionToken(request.headers.cookie));
+    response.status(204).end();
+  }
+}
+
 @Module({})
 export class AccountsModule {
-  static register(service: RegistrationService): DynamicModule {
-    return {module: AccountsModule, controllers: [AccountsController], providers: [{provide: REGISTRATION, useValue: service}]};
+  static register(service: RegistrationService, sessions?: SessionService): DynamicModule {
+    return {module: AccountsModule, controllers: sessions ? [AccountsController, SessionsController] : [AccountsController], providers: [{provide: REGISTRATION, useValue: service}, ...(sessions ? [{provide: SESSIONS, useValue: sessions}] : [])]};
   }
 }

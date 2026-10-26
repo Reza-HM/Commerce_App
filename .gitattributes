@@ -1,0 +1,2 @@
+# Preserve the exact bytes of the checksum-verified public password policy corpus.
+apps/api/src/accounts/assets/10k-most-common.txt -text

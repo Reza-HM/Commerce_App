@@ -9,13 +9,29 @@ async function capture(database, operation) {
   return database.takeQueries();
 }
 
-async function validateApplicationHistory(database, folder, {apply = applyMigrationHistory} = {}) {
+function assertAccountSchema(snapshot) {
+  const accounts = snapshot.find(row => row.schema === 'public' && row.name === 'accounts');
+  const passwords = snapshot.find(row => row.schema === 'public' && row.name === 'account_passwords');
+  assert.ok(accounts && passwords, 'Account migration tables missing');
+  assert.equal(accounts.columns.length, 4, 'Unexpected account columns');
+  assert.equal(passwords.columns.length, 2, 'Unexpected credential columns');
+  for (const name of ['accounts_pkey', 'accounts_email_normalized_key', 'accounts_email_canonical_check']) {
+    assert.ok(accounts.constraints.some(value => value.startsWith(name + ':')), 'Account constraint missing');
+  }
+  assert.ok(passwords.constraints.some(value => value.includes('FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT')), 'Credential FK missing');
+  assert.ok(passwords.constraints.some(value => value.startsWith('account_passwords_pkey:')), 'Credential primary key missing');
+}
+
+async function validateApplicationHistory(database, folder, {apply = applyMigrationHistory, requireAccounts = false} = {}) {
   const history = readMigrationHistory(folder);
   const before = await schemaSnapshot(database);
   const beforeJournal = await journalSnapshot(database);
+  if (requireAccounts) assert.ok(history.count > 0, 'Non-empty account history required');
+  const freshInstall = before.length === 0 && beforeJournal.length === 0;
   const first = await capture(database, () => apply(history, () => database));
   const after = await schemaSnapshot(database);
   const journal = await journalSnapshot(database);
+  if (requireAccounts) assertAccountSchema(after);
   const second = await capture(database, () => apply(history, () => database));
   assert.deepEqual(await schemaSnapshot(database), after, 'Application schema changed on replay');
   assert.deepEqual(await journalSnapshot(database), journal, 'Application journal changed on replay');
@@ -29,7 +45,7 @@ async function validateApplicationHistory(database, folder, {apply = applyMigrat
     const applicationStatements = new Set(files.flatMap(file => file.sql.map(statement => statement.trim())));
     assert.equal(second.filter(query => applicationStatements.has(query.trim())).length, 0, 'Application statements repeated');
   }
-  return {count: history.count, empty: history.count === 0};
+  return {count: history.count, empty: history.count === 0, ...(requireAccounts ? {freshInstall} : {})};
 }
 
-module.exports = {validateApplicationHistory};
+module.exports = {validateApplicationHistory, assertAccountSchema};

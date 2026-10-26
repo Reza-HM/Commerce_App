@@ -3,8 +3,9 @@
 ## Context
 
 See `proposal.md` for motivation and `specs/account-registration/spec.md` for the
-behavior contract. This is a proposal for owner review, not an implementation
-record or approval to apply it.
+behavior contract. The owner approved this design for implementation on 2026-10-26.
+See `docs/account-registration.md` for execution evidence; approval does not grant
+push, PR creation, or merge authority.
 
 Observed baseline after fetch: PR #4 is merged; local `main` and `origin/main`
 resolve to `3eb7ab25662051cae07f9d60c58c1d8468b0bea7`. Planning starts on
@@ -305,5 +306,5 @@ global trigger, terminate unrelated sessions, or reset the database to simulate 
    No automatic down migration, dropped account data, role/grant changes, or public
    deployment step is part of this plan.
 
-Owner approval of these proposed choices is required before apply. Any later push,
-PR creation, pipeline commit, or merge retains its separate Git approval boundary.
+Owner approval to apply was received on 2026-10-26. Any later push, PR creation,
+pipeline commit, or merge retains its separate Git approval boundary.

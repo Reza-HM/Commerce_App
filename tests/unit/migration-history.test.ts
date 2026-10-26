@@ -30,14 +30,21 @@ function fixture() {
   return {folder,write,close};
 }
 
-test('repository empty history never creates a client or invokes migration DDL',async()=>{
-  const history=readMigrationHistory(resolve('packages/database/migrations'));
-  expect(history.count).toBe(0);
+test('empty fixture history never creates a client or invokes migration DDL',async()=>{
+  const f=fixture();
+  try {
+  f.write('{"entries":[]}');
+  const history=readMigrationHistory(f.folder);
   const factory=jest.fn(), migrator=jest.fn();
   expect(await applyMigrationHistory(history,factory,{},migrator)).toEqual({empty:true,count:0});
   expect(await applyMigrationHistory(history,factory,{},migrator)).toEqual({empty:true,count:0});
   expect(factory).not.toHaveBeenCalled();
   expect(migrator).not.toHaveBeenCalled();
+  } finally {f.close();}
+});
+
+test('repository contains the actual account migration instead of an empty history',()=>{
+  expect(readMigrationHistory(resolve('packages/database/migrations')).count).toBe(1);
 });
 
 test('missing history retains the existing no-op; malformed history fails',()=>{

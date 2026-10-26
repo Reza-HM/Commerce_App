@@ -21,7 +21,8 @@ on them.
   preserve target guards, finite limits, exact ownership, rollback, replay, and
   independent sentinel checks. Distinguish fresh-install evidence from replay.
 - Document the registration contract and its local operating limits when applied.
-  These artifacts are proposed decisions awaiting owner approval.
+  The owner approved these decisions on 2026-10-26; implementation evidence is in
+  `docs/account-registration.md`.
 
 Sessions, sign-in/out, cookies/tokens, web pages, email delivery/verification,
 password recovery, seller workflows, business approval, and admin provisioning

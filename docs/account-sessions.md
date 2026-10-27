@@ -41,3 +41,19 @@ Local gates passed: lint, typecheck, 265 unit tests, production build, two
 Chromium tests, five API process smoke checks, API documentation lint/build,
 strict OpenSpec validation, and the guarded database suite described above.
 GitHub CI and fresh-install evidence for this revision are pending delivery.
+
+## Browser account pages
+
+The [account browser flow](account-web-flow.md) provides sign-in, a minimal
+session-checked account page and sign-out. Inspection is triggered by account
+entry, explicit retry, foreground return and history restoration, with no periodic
+renewal. A 401 directs the visitor to sign-in; outages show an unavailable state.
+The UI displays neither the internal account ID nor a verified-ownership claim.
+
+Confirmed DELETE 204 leads to a signed-out acknowledgment, including with no
+usable cookie. A failed/lost response hides signed-in content but warns that
+revocation is unconfirmed, with direct DELETE retry. Foreground inspection cannot
+erase that warning: the API may clear the cookie while revocation fails. A late
+inspection result cannot restore signed-in presentation after navigation/sign-out.
+This is current-session sign-out, not a claim that all sessions or a previously
+uncertain server row have been revoked. Existing expiry still bounds such rows.

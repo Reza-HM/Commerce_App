@@ -11,8 +11,15 @@ for authorization, credential verification, cookie security, and expiration.
 Follow [foundation setup](foundation.md) and explicitly apply existing migrations
 before using a development account. No migration is added by this browser flow.
 Use `http://127.0.0.1:3000` for the web and `http://127.0.0.1:3001` for the API.
-Configure the API with `WEB_ORIGINS=http://127.0.0.1:3000`. Use the same hostname
-on both sides; do not mix `localhost` and `127.0.0.1`.
+The paired development commands now use this setup by default: `npm run dev:web`
+binds and advertises `127.0.0.1`; `npm run dev:api` supplies
+`WEB_ORIGINS=http://127.0.0.1:3000` only in development when that process setting
+is absent. An explicit value, including an empty deny-all value, is preserved.
+Use the same hostname on both sides; do not mix `localhost` and `127.0.0.1`.
+For a different web port/origin, set `WEB_ORIGINS` in the API process environment.
+It is not loaded from the root database-only `.env`. Restart the API after
+changing its origin settings; open the exact web URL shown above. Direct API
+startup and production still require explicit allowed origins.
 
 `NEXT_PUBLIC_API_ORIGIN` defaults to `http://127.0.0.1:3001` only when absent.
 An explicit value must be an HTTP(S) origin without credentials, a non-root path,
@@ -138,3 +145,15 @@ Empty desktop registration and mobile sign-in screenshots were visually reviewed
 their files remain ignored. All retained test data is synthetic. No runtime
 dependency, API contract, database migration, pipeline or deployment change was
 required. Actual GitHub CI is a separate current-head delivery gate.
+
+## Local-origin follow-up (2026-10-28)
+
+The development commands now align the advertised web host and default API
+allowlist with the canonical loopback setup above. A regression test runs actual
+registration/session preflights through the API runtime using the development
+command's configuration and proves exact-origin grants, with no database access.
+Explicit settings, empty deny-all, non-development startup and database-only
+private environment loading remain unchanged. Validation passed: lint, typecheck,
+277 unit tests across 27 suites, 14 Chromium tests with production builds, API
+documentation lint/build and strict OpenSpec validation. The original running
+checkout's generated development types were preserved during isolated validation.

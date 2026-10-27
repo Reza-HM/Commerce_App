@@ -32,7 +32,7 @@ function run(args, label) {
     cwd: root,
     stdio: 'inherit',
     shell: false,
-    env: {...childEnvironment, NEXT_TELEMETRY_DISABLED: '1', ...(command === 'test:e2e' ? {DATABASE_URL: 'web-build-private-sentinel', PRIVATE_SENTINEL: 'web-build-private-sentinel'} : {})}
+    env: {...childEnvironment, NEXT_TELEMETRY_DISABLED: '1', ...(command === 'test:e2e' ? {DATABASE_URL: 'web-build-private-sentinel', PRIVATE_SENTINEL: 'web-build-private-sentinel', NEXT_PUBLIC_API_ORIGIN: 'http://127.0.0.1:4174'} : {})}
   });
   if (result.error || result.status !== 0) {
     console.error(`Workspace step failed: ${label}`);

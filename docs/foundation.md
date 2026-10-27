@@ -1,8 +1,8 @@
 # Foundation development
 
-This is a technical foundation with an English web page and operational API.
-It has no marketplace workflows or business tables. English/USD are the initial
-product defaults, without pricing or monetary domain code.
+This is a technical foundation with an English web shell, local account browser
+flow and account/operational API. It has no marketplace workflows. English/USD
+are the initial product defaults, without pricing or monetary domain code.
 
 ## Setup
 
@@ -72,6 +72,7 @@ values, credentials, URLs, or private file paths. Web exports no server values.
 | `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline |
 | `API_PORT` | 3001; 1–65535 |
 | `WEB_ORIGINS` | Empty; otherwise exact HTTP(S) origins |
+| `NEXT_PUBLIC_API_ORIGIN` | Public web build setting; absent defaults to `http://127.0.0.1:3001`; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
 | `API_BODY_LIMIT_BYTES` | 1048576 (1 MiB) |
 | `API_HEADER_LIMIT_BYTES` | 16384 (16 KiB) |
 | `API_HEADER_TIMEOUT_MS` | 5000; no greater than request timeout |
@@ -95,6 +96,14 @@ values win, including empty settings that must fail validation. Integration sets
 Unit, build, type-check, browser, and process-smoke commands do not load this file.
 Normal API production startup still uses explicit process configuration. Never
 commit `.env`, paste credentials into commands, or include secret values in logs.
+
+## Account browser setup
+
+For the account browser journey, use the web on `http://127.0.0.1:3000` and API
+on `http://127.0.0.1:3001`, with the exact web origin in API `WEB_ORIGINS`.
+Set public API configuration before building the web; never pass database
+configuration into browser settings. See [account browser flow](account-web-flow.md)
+for routes, cookie requirements, failures and test evidence.
 
 ## Database lifecycle and migrations
 

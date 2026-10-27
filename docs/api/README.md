@@ -1,8 +1,9 @@
 # HTTP API reference
 
-The NestJS API currently implements health probes and email/password account
-registration. The Next.js web application has a foundation page; it does not yet
-provide an account browser flow. PostgreSQL/Drizzle is an internal persistence
+The NestJS API currently implements health probes, email/password account
+registration and revocable sessions. The Next.js web application provides a
+foundation page and an [account browser flow](../account-web-flow.md).
+PostgreSQL/Drizzle is an internal persistence
 service, with no independently exposed HTTP API.
 
 ## Read or generate the reference
@@ -180,8 +181,10 @@ Only two hashing/persistence operations run concurrently, without a waiting queu
 slots are retained until work settles, even after disconnect. Restart resets peer
 budgets and replicas multiply them; these limits are not shared production protection.
 
-Account web flow, verification/email delivery and password recovery are separate
-future changes, not available endpoints. Registration does
+Email verification/delivery and password recovery remain separate future changes,
+not available endpoints. Browser registration uses this same API without
+credentials, preserves generic 202 acknowledgment and requires a separate sign-in.
+Registration does
 not grant admin/business approval. See [account registration](../account-registration.md)
 for hashing, migrations, database safeguards, lifecycle and validation evidence.
 
@@ -206,6 +209,14 @@ parsed attempts per direct peer per minute and shares two in-flight password wor
 slots with registration. Expired and revoked rows are not automatically deleted.
 Verification and recovery are separate prerequisites for public launch; the future
 verification change must block unverified sign-in and address existing sessions.
+
+The browser flow calls these existing routes directly with credentials and the
+custom header. It never reads the HttpOnly cookie or exposes the account ID in
+its minimal account page. Inspection is user/lifecycle-triggered rather than
+periodic polling. A session 401 prompts sign-in; network/403/server failures offer
+retry without claiming confirmed sign-out. Failed DELETE responses retain an
+unconfirmed-revocation warning and a direct retry action. No HTTP contract or
+OpenAPI operation is added by these pages.
 
 ## Keeping documentation current
 

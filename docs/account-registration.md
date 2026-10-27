@@ -1,7 +1,7 @@
 # Account registration
 
-Registration is an API-only local milestone. Browser flow, email
-verification/delivery, and password recovery remain separate changes; verification
+Registration is available through the API and the [account browser flow](account-web-flow.md).
+Email verification/delivery and password recovery remain separate changes; verification
 and recovery are required before public launch. One ordinary account can later buy
 and sell. Registration grants no administrative privileges or business approval.
 
@@ -177,7 +177,8 @@ allowances, and loopback clients may share a budget. They do not establish share
 rate enforcement or public deployment readiness. Public HTTPS ingress, trusted
 proxy identity, shared limits and bot protection need deployment-specific work.
 Verification/recovery and their unverified-account restrictions remain pre-launch
-follow-ups; no future account flow is implemented here.
+follow-ups. The browser flow preserves generic acceptance, uses a separate
+sign-in step, and never transfers the submitted password between routes.
 
 ## Validation commands
 

@@ -26,10 +26,10 @@ test('private database loading selects only database keys and preserves process 
   } finally {unlinkSync(file);rmdirSync(folder);}
 });
 
-test('API development defaults to one canonical origin without replacing explicit policy',()=>{
+test('API development defaults to both local origins without replacing explicit policy',()=>{
   const folder=mkdtempSync(join(tmpdir(),'commerce-origin-unit-')),file=join(folder,'absent.env');
   try {
-    expect(commandEnvironment('dev:api',{},file)).toEqual({NODE_ENV:'development',WEB_ORIGINS:'http://127.0.0.1:3000'});
+    expect(commandEnvironment('dev:api',{},file)).toEqual({NODE_ENV:'development',WEB_ORIGINS:'http://127.0.0.1:3000,http://localhost:3000'});
     for (const origin of ['', 'http://127.0.0.1:3100']) {
       expect(commandEnvironment('dev:api',{WEB_ORIGINS:origin},file).WEB_ORIGINS).toBe(origin);
     }
@@ -40,6 +40,6 @@ test('API development defaults to one canonical origin without replacing explici
       expect(commandEnvironment(command,{},file).WEB_ORIGINS).toBeUndefined();
     }
     writeFileSync(file,'WEB_ORIGINS=http://localhost:3000\nNEXT_PUBLIC_API_ORIGIN=untrusted\n');
-    expect(commandEnvironment('dev:api',{},file)).toEqual({NODE_ENV:'development',WEB_ORIGINS:'http://127.0.0.1:3000'});
+    expect(commandEnvironment('dev:api',{},file)).toEqual({NODE_ENV:'development',WEB_ORIGINS:'http://127.0.0.1:3000,http://localhost:3000'});
   } finally {if (existsSync(file)) unlinkSync(file);rmdirSync(folder);}
 });

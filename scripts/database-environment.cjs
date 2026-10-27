@@ -21,10 +21,10 @@ function databaseEnvironment(env, mode, filename = join(__dirname, '../.env')) {
 function commandEnvironment(command, env = process.env, filename) {
   if (!['test:integration', 'db:migrate', 'dev:api'].includes(command)) return env;
   const result = databaseEnvironment(env, command === 'test:integration' ? 'test' : 'development', filename);
-  // Match the web dev command and browser client's canonical loopback host.
+  // Allow the two supported local browser origins.
   // This is a command-only default: the API runtime still denies absent origins.
   if (command === 'dev:api' && result.NODE_ENV === 'development' && result.WEB_ORIGINS === undefined) {
-    return {...result, WEB_ORIGINS: 'http://127.0.0.1:3000'};
+    return {...result, WEB_ORIGINS: 'http://127.0.0.1:3000,http://localhost:3000'};
   }
   return result;
 }

@@ -40,9 +40,9 @@ added by this documentation change.
 
 The reference describes local API base URL `http://127.0.0.1:3001`, overridden
 by `API_PORT`. Follow [foundation setup](../foundation.md) before starting the API
-with `npm run dev:api`. That root command supplies the canonical web origin
-`http://127.0.0.1:3000` only when `WEB_ORIGINS` is absent in development;
-`npm run dev:web` advertises the matching loopback host. Explicit process origin
+with `npm run dev:api`. That root command supplies both local web origins
+`http://127.0.0.1:3000` and `http://localhost:3000` only when `WEB_ORIGINS` is
+absent in development; `npm run dev:web` binds to loopback. Explicit process origin
 settings are preserved, and direct/production API startup grants no origins by
 default. Root `.env` loading remains database-only. See the browser-flow guide
 for custom origins and restart instructions. Account tables must be installed

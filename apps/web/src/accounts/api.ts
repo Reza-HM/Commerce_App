@@ -5,8 +5,8 @@ export type FailureCode = 'configuration' | 'unavailable' | 'timeout' | 'cancell
 export type Result = {ok: true} | {ok: false; code: FailureCode; field?: 'email' | 'password'};
 type Credentials = {email: string; password: string};
 
-export function apiOrigin(value: string | undefined): string | undefined {
-  if (value === undefined) return 'http://127.0.0.1:3001';
+export function apiOrigin(value: string | undefined, hostname?: string): string | undefined {
+  if (value === undefined) return hostname === 'localhost' ? 'http://localhost:3001' : 'http://127.0.0.1:3001';
   try {
     const url = new URL(value);
     if (!value || value !== value.trim() || /[\\?#@]/.test(value) ||
@@ -29,7 +29,7 @@ function object(value: unknown): value is Record<string, unknown> {
 }
 
 export function createAccountApi(originValue: string | undefined, send: typeof fetch = fetch, deadline = 15000) {
-  const origin = apiOrigin(originValue);
+  const origin = apiOrigin(originValue, typeof window === 'undefined' ? undefined : window.location.hostname);
   return async (action: Action, credentials?: Credentials, signal?: AbortSignal): Promise<Result> => {
     if (!origin) return {ok: false, code: 'configuration'};
     if (signal?.aborted) return {ok: false, code: 'cancelled'};

@@ -71,8 +71,8 @@ values, credentials, URLs, or private file paths. Web exports no server values.
 | `DATABASE_ACQUIRE_TIMEOUT_MS` / test equivalent | 1000; effective maximum 1000 ms protects readiness |
 | `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline |
 | `API_PORT` | 3001; 1–65535 |
-| `WEB_ORIGINS` | Empty; otherwise exact HTTP(S) origins |
-| `NEXT_PUBLIC_API_ORIGIN` | Public web build setting; absent defaults to `http://127.0.0.1:3001`; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
+| `WEB_ORIGINS` | Runtime default empty; root `dev:api` allows `http://127.0.0.1:3000` and `http://localhost:3000` only when absent in development; explicit values are exact HTTP(S) origins |
+| `NEXT_PUBLIC_API_ORIGIN` | Public web build setting; absent defaults to `http://localhost:3001` on localhost and `http://127.0.0.1:3001` otherwise; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
 | `API_BODY_LIMIT_BYTES` | 1048576 (1 MiB) |
 | `API_HEADER_LIMIT_BYTES` | 16384 (16 KiB) |
 | `API_HEADER_TIMEOUT_MS` | 5000; no greater than request timeout |
@@ -99,8 +99,14 @@ commit `.env`, paste credentials into commands, or include secret values in logs
 
 ## Account browser setup
 
-For the account browser journey, use the web on `http://127.0.0.1:3000` and API
-on `http://127.0.0.1:3001`, with the exact web origin in API `WEB_ORIGINS`.
+For the account browser journey, open `http://localhost:3000` or
+`http://127.0.0.1:3000`. The web client defaults to the corresponding API
+hostname on port 3001, and the root API dev command allows both web origins when
+`WEB_ORIGINS` is absent in development. Explicit origin settings (including
+empty deny-all) win; direct/production API startup still defaults to no CORS
+grant. For custom ports/origins, set `WEB_ORIGINS` in the API process
+environment, not the root `.env` (whose loader remains database-only). Restart
+both development commands after changing this setup.
 Set public API configuration before building the web; never pass database
 configuration into browser settings. See [account browser flow](account-web-flow.md)
 for routes, cookie requirements, failures and test evidence.

@@ -12,6 +12,7 @@ const commands = {
   test: [databaseBuild],
   'test:integration': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
   'test:smoke': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api']],
+  'test:e2e:local': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'build', '--workspace', '@commerce/web']],
   'test:e2e': [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'build', '--workspace', '@commerce/web']],
   'db:migrate': [databaseBuild],
   build: [databaseBuild, ['run', 'build', '--workspace', '@commerce/api'], ['run', 'build', '--workspace', '@commerce/web']],
@@ -26,6 +27,11 @@ if (!npmCli || !Object.hasOwn(commands, command)) {
 let childEnvironment = process.env;
 try { childEnvironment = commandEnvironment(command); }
 catch { console.error('Invalid local database environment'); process.exit(1); }
+
+if (command === 'test:e2e:local') {
+  childEnvironment = {...childEnvironment, LOCAL_DEFAULT_TEST: '1'};
+  childEnvironment.NEXT_PUBLIC_API_ORIGIN = 'http://localhost:4184';
+}
 
 function run(args, label) {
   const result = spawnSync(process.execPath, args, {
@@ -47,4 +53,14 @@ if (command === 'test') {
 if (command === 'test:integration') run(['scripts/integration.cjs'], 'live integration');
 if (command === 'db:migrate') run(['scripts/migrate.cjs'], 'migration');
 if (command === 'test:smoke') run(['--test', 'tests/smoke/api.test.cjs'], 'API process smoke');
-if (command === 'test:e2e') run(['node_modules/@playwright/test/cli.js', 'test'], 'browser smoke');
+if (command === 'test:e2e') {
+  run(['node_modules/@playwright/test/cli.js', 'test'], 'browser smoke');
+  run([npmCli, 'run', 'test:e2e:local'], 'local default browser journey');
+}
+if (command === 'test:e2e:local') {
+  run(['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.local.config.ts'], 'local browser journey');
+  delete childEnvironment.NEXT_PUBLIC_API_ORIGIN;
+  childEnvironment.LOCAL_DEFAULT_TEST = '0';
+  run([npmCli, 'run', 'build', '--workspace', '@commerce/web'], 'build with default API origin');
+  run(['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.local.config.ts'], 'default API origin in browser');
+}

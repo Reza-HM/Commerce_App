@@ -71,7 +71,7 @@ values, credentials, URLs, or private file paths. Web exports no server values.
 | `DATABASE_ACQUIRE_TIMEOUT_MS` / test equivalent | 1000; effective maximum 1000 ms protects readiness |
 | `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline |
 | `API_PORT` | 3001; 1–65535 |
-| `WEB_ORIGINS` | Empty; otherwise exact HTTP(S) origins |
+| `WEB_ORIGINS` | Runtime default empty; root `dev:api` defaults to `http://127.0.0.1:3000` only when absent in development; explicit values are exact HTTP(S) origins |
 | `NEXT_PUBLIC_API_ORIGIN` | Public web build setting; absent defaults to `http://127.0.0.1:3001`; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
 | `API_BODY_LIMIT_BYTES` | 1048576 (1 MiB) |
 | `API_HEADER_LIMIT_BYTES` | 16384 (16 KiB) |
@@ -100,7 +100,13 @@ commit `.env`, paste credentials into commands, or include secret values in logs
 ## Account browser setup
 
 For the account browser journey, use the web on `http://127.0.0.1:3000` and API
-on `http://127.0.0.1:3001`, with the exact web origin in API `WEB_ORIGINS`.
+on `http://127.0.0.1:3001`. The web dev command binds/advertises `127.0.0.1`,
+and the root API dev command supplies that exact web origin when `WEB_ORIGINS`
+is absent in development. Explicit origin settings (including empty deny-all)
+win; direct/production API startup still defaults to no CORS grant. For custom
+ports/origins, set `WEB_ORIGINS` in the API process environment, not the root
+`.env` (whose loader remains database-only). Restart both development commands
+and open `http://127.0.0.1:3000` after changing this setup.
 Set public API configuration before building the web; never pass database
 configuration into browser settings. See [account browser flow](account-web-flow.md)
 for routes, cookie requirements, failures and test evidence.

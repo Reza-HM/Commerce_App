@@ -2,6 +2,9 @@ import {apiOrigin, createAccountApi} from '../../apps/web/src/accounts/api';
 
 test('public origin defaults only when absent and rejects destinations outside an origin', () => {
   expect(apiOrigin(undefined)).toBe('http://127.0.0.1:3001');
+  expect(apiOrigin(undefined, 'localhost')).toBe('http://localhost:3001');
+  expect(apiOrigin(undefined, 'example.test')).toBe('http://127.0.0.1:3001');
+  expect(apiOrigin('https://example.test', 'localhost')).toBe('https://example.test');
   expect(apiOrigin('https://example.test/')).toBe('https://example.test');
   for (const value of ['', ' https://example.test', 'ftp://example.test', 'https://u:p@example.test',
     'https://@example.test', 'https://example.test/path', 'https://example.test?', 'https://example.test#', 'https:\\example.test']) expect(apiOrigin(value)).toBeUndefined();

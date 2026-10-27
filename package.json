@@ -22,6 +22,7 @@
     "start:web": "npm run start --workspace @commerce/web",
     "test:integration": "node scripts/workspace.mjs test:integration",
     "test:e2e": "node scripts/workspace.mjs test:e2e",
+    "test:e2e:local": "node scripts/workspace.mjs test:e2e:local",
     "test:smoke": "node scripts/workspace.mjs test:smoke",
     "db:generate": "npm exec --workspace @commerce/database -- drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "node scripts/workspace.mjs db:migrate",

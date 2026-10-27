@@ -26,11 +26,13 @@ export const test=base.extend<{api: Fixture}>({
       renew:async digest => {counts.current++;return sessions.get(digest);},
       revoke:async digest => {counts.signOut++;if (revocationFails) throw Object.assign(new Error('fixture unavailable'),{code:'ECONNREFUSED'});sessions.delete(digest);}
     };
-    const config=readApiConfiguration({NODE_ENV:'development',DATABASE_URL:'postgres://fixture:synthetic@127.0.0.1/test',WEB_ORIGINS:'http://127.0.0.1:4173'});
+    const localDefaults=process.env.LOCAL_DEFAULT_TEST === '1';
+    const origins=localDefaults ? 'http://localhost:4183' : 'http://127.0.0.1:4173';
+    const config=readApiConfiguration({NODE_ENV:'development',DATABASE_URL:'postgres://fixture:synthetic@127.0.0.1/test',WEB_ORIGINS:origins});
     const runtime=await createRuntime(config,{ready:async()=>true,close:async()=>{}},event=>logs.push(JSON.stringify(event)),registration,new SessionService(repository,registration));
     try {
       // Bind explicitly; a collision fails rather than reusing an unknown process.
-      await runtime.listen(4174);
+      await runtime.listen(localDefaults ? 4184 : 4174);
       await use({expire:()=>sessions.clear(),failRevocation:fail=>{revocationFails=fail;},logs,counts});
     } finally {expect(await runtime.close()).toBe(0);}
   },{auto:true}]

@@ -10,18 +10,17 @@ for authorization, credential verification, cookie security, and expiration.
 
 Follow [foundation setup](foundation.md) and explicitly apply existing migrations
 before using a development account. No migration is added by this browser flow.
-Use `http://127.0.0.1:3000` for the web and `http://127.0.0.1:3001` for the API.
-The paired development commands now use this setup by default: `npm run dev:web`
-binds and advertises `127.0.0.1`; `npm run dev:api` supplies
-`WEB_ORIGINS=http://127.0.0.1:3000` only in development when that process setting
-is absent. An explicit value, including an empty deny-all value, is preserved.
-Use the same hostname on both sides; do not mix `localhost` and `127.0.0.1`.
-For a different web port/origin, set `WEB_ORIGINS` in the API process environment.
-It is not loaded from the root database-only `.env`. Restart the API after
-changing its origin settings; open the exact web URL shown above. Direct API
-startup and production still require explicit allowed origins.
+The default setup supports either `http://localhost:3000` or
+`http://127.0.0.1:3000` for the web. `npm run dev:web` binds to loopback and
+`npm run dev:api` allows both exact web origins when `WEB_ORIGINS` is absent in
+development. Explicit values, including an empty deny-all value, are preserved.
+For other web origins, set `WEB_ORIGINS` in the API process environment; the
+root database-only `.env` does not load it. Restart the API after changes.
+Direct API startup and production still require explicit allowed origins.
 
-`NEXT_PUBLIC_API_ORIGIN` defaults to `http://127.0.0.1:3001` only when absent.
+When `NEXT_PUBLIC_API_ORIGIN` is absent, a localhost page uses
+`http://localhost:3001`; other pages default to `http://127.0.0.1:3001`.
+Use matching hostnames for web and API so the strict session cookie works.
 An explicit value must be an HTTP(S) origin without credentials, a non-root path,
 query or fragment. Invalid values disable account requests with a safe message;
 they do not stop public pages rendering or silently fall back. The origin is
@@ -36,6 +35,8 @@ credentialed. Session fetches include browser credentials and
 `__Host-commerce_session` cookie; web code never reads or copies it. It remains
 Secure, HttpOnly, SameSite=Strict and Path=/. Chromium loopback support is tested;
 other browser/host combinations may differ. Do not weaken cookie attributes.
+`npm run test:e2e:local` verifies a localhost browser journey with an in-memory
+account store and requires ports 4183 and 4184 to be free.
 
 ## Forms and outcomes
 

@@ -39,7 +39,7 @@ The email-verification boundary SHALL deny unverified account sign-in and sessio
 - **WHEN** the email-verification change replaces the temporary unverified-account allowance
 - **THEN** new session creation and inspection require a verified account
 - **AND** existing unverified accounts must confirm their email and explicitly sign in again
-- **AND** public launch remains gated on password recovery, external delivery, secure deployment, and the other documented prerequisites
+- **AND** public launch remains gated on password recovery, secure deployment, shared abuse protection, and the other documented prerequisites
 
 #### Scenario: An old session is presented after verification
 

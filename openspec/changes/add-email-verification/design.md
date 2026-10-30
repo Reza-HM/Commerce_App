@@ -2,6 +2,11 @@
 
 ## Context
 
+The following baseline motivated the initial implementation delivered in PR #14.
+The owner subsequently required actual real-inbox delivery and selected Gmail SMTP
+because no owned domain is available. The transport decisions below supersede the
+earlier capture-only boundary; the completed persistence/browser/session work remains.
+
 See `proposal.md` for motivation and scope. The current schema already contains
 nullable `accounts.email_verified_at`; nothing sets or enforces it. Registration
 returns a committed creation/existing result internally but discards that distinction
@@ -17,10 +22,10 @@ already have shared appearance, accessibility, and reduced-motion conventions.
 
 **Goals:** bind mailbox control to the registered password, enforce that proof in
 session authorization, preserve enumeration resistance and credential immutability,
-and provide an actual local captured-email/browser journey with isolated evidence.
+and provide actual external inbox delivery and a complete verification/browser journey.
 
 **Non-goals:** resetting passwords, letting a duplicate registration replace them,
-external SMTP/provider integration, distributed mail workers, guaranteed delivery,
+distributed mail workers, guaranteed delivery, bulk/marketing mail,
 public deployment, general session cleanup, or changes to CI/protection/helpers.
 
 ## Decisions
@@ -133,30 +138,43 @@ account-status check was rejected because it could make old sessions usable agai
 once verification succeeds. Existing verified-account sessions retain their ordinary
 expiry/revocation behavior.
 
-### 5. Bounded best-effort local SMTP
+### 5. Bounded best-effort SMTP with a real sender
 
 Use a pinned maintained Nodemailer SMTP client behind a small injected sender
 interface. Do not implement SMTP by hand or tie account logic to Mailpit's HTTP API.
 Disable transport debug logging, file/URL content loading, attachments, pooling,
-external service presets, and implicit relay/authentication configuration. Messages
+service presets, proxy URLs and arbitrary remote SMTP endpoints. Messages
 are application-authored English text/HTML with the configured sender, verification
 URL, expiry, and instructions to ignore unsolicited mail; no remote tracking/artwork.
 
-Server-only configuration:
+Server-only configuration (normal mode):
 
-| Setting                   | Development default     | Validation                                                                                 |
-| ------------------------- | ----------------------- | ------------------------------------------------------------------------------------------ |
-| `MAIL_SMTP_HOST`          | `127.0.0.1`             | Literal loopback IP; no DNS/proxy/remote host                                              |
-| `MAIL_SMTP_PORT`          | `1025`                  | Integer 1-65535                                                                            |
-| `VERIFICATION_WEB_ORIGIN` | `http://127.0.0.1:3000` | Exact loopback HTTP(S) origin present in `WEB_ORIGINS`; no credentials/path/query/fragment |
+| Setting                   | Default              | Validation                                                                                        |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| `MAIL_PROVIDER`           | `gmail`              | `gmail` or explicit `capture`; never automatic fallback                                           |
+| `GMAIL_SMTP_USER`         | None                 | Canonical ordinary `gmail.com` sender account                                                     |
+| `GMAIL_SMTP_APP_PASSWORD` | None                 | Dedicated 16-letter Google App Password; accept Google's display spaces                           |
+| `VERIFICATION_WEB_ORIGIN` | Development loopback | Exact trusted origin in `WEB_ORIGINS`; HTTPS or loopback HTTP; no credentials/path/query/fragment |
 
-Use fixed synthetic sender `Commerce <no-reply@commerce.test>`. Non-development
-execution supplies these three values explicitly, including test fixtures and process
-smoke; no production provider mode is added. Configuration fails before listening
-with setting names only. Plaintext SMTP is an intentional loopback capture policy,
-not a weakening of global TLS validation or authorization for external transport.
-The root private `.env` loader remains database-only. API startup creates no SMTP
-connection; a stopped inbox does not fail database readiness or public web rendering.
+Gmail fixes the endpoint to `smtp.gmail.com:465`, verifies its hostname/certificate,
+requires TLS 1.2 or newer and authenticates only over the established encrypted
+connection. From/envelope sender is exactly the configured Gmail user with fixed
+display name Commerce. No normal Google password, OAuth-client setup, domain
+purchase, TLS bypass or paid subscription is part of this change. The owner prepares
+an eligible Google account with 2-Step Verification and a dedicated App Password.
+
+A masked Node startup command usable from PowerShell prompts for the App Password, supplies
+it through the API child process environment and restores the parent's environment
+on exit. It never writes a secret file or changes the existing database-only `.env`
+loader, CI secrets or deployment configuration. The sender and designated acceptance
+recipient are supplied privately, never hardcoded into maintained source or examples.
+
+Explicit `MAIL_PROVIDER=capture` retains validated literal-loopback `MAIL_SMTP_HOST`
+and port plus the fixed synthetic sender `Commerce <no-reply@commerce.test>`. Capture
+links remain loopback-only. Configuration fails before listening with setting names
+only. API startup creates no SMTP connection; mail outage does not fail database
+readiness or public web rendering. Automated fixtures select capture explicitly and
+never inherit Google credentials for an external send.
 
 Reserve one of two independent issuance/delivery slots before account-dependent
 request work; there is no waiting queue. The reservation covers challenge preparation
@@ -177,7 +195,7 @@ or token/digest fields. Never detach an untracked promise or auto-retry a messag
 Shutdown stops new mail/hash admission, drains both work groups, closes SMTP resources,
 then closes the shared database under the current hard deadline. A crash can lose a
 pending message; delivery is intentionally not durable. SMTP acceptance confirms only
-capture-service acceptance. Generic user guidance always offers explicit resend.
+provider acceptance, not final inbox receipt. Generic guidance offers explicit resend.
 
 For manual development, document a version-pinned Mailpit binary or container with
 SMTP bound to `127.0.0.1:1025`, inbox bound to `127.0.0.1:8025`, no relay/release setup,
@@ -236,7 +254,10 @@ legacy rows. Existing live suite sentinel preservation is checked after approved
 migration effects, never used to pretend the intentional rollout revocation did not
 happen. No arbitrary database reset, unowned cleanup, or reuse of a developer inbox.
 The actual local Mailpit journey is separate evidence from SMTP fixtures and browser
-doubles. Preserve all existing gates, migration hashes, and generated-file policy.
+doubles. Actual external delivery is separately required: use only the owner-designated
+sender/recipient, confirm real inbox arrival, follow the intact link and complete
+verification and explicit sign-in/sign-out. A Gmail Sent copy or 250 response cannot
+substitute for receipt. Preserve all gates, migration hashes and generated-file policy.
 
 ## Risks / Trade-offs
 
@@ -247,7 +268,7 @@ doubles. Preserve all existing gates, migration hashes, and generated-file polic
   treat capture as evidence of external deliverability.
 - **Owner does not know the first registered password** -> Verification cannot reset
   it; make the limitation honest until the separate recovery milestone is delivered.
-- **Email client rewrites/strips fragments** -> Verify actual Mailpit text/HTML links
+- **Email client rewrites/strips fragments** -> Verify actual delivered text/HTML links
   and desktop/mobile browsers; missing fragments fail safely and permit resend.
 - **Existing accounts lose access immediately** -> Preserve accounts/passwords and
   provide the independent verification-request route; no automatic verification.
@@ -267,7 +288,7 @@ doubles. Preserve all existing gates, migration hashes, and generated-file polic
    unverified-account sessions. It never sets verification timestamps or rewrites
    passwords. Test fresh installation on a confirmed fresh target and unchanged replay
    separately; do not reset an existing target to manufacture evidence.
-4. Start the loopback capture inbox and new API/web with matching explicit web origin.
+4. Configure the real Gmail sender and start API/web with matching explicit web origin.
    Existing users request verification, confirm the registered password, and sign in.
 5. On operational failure, stop the new runtime and repair forward while keeping the
    verified-only boundary and revoked sessions. Do not roll back by restoring the old
@@ -278,5 +299,7 @@ doubles. Preserve all existing gates, migration hashes, and generated-file polic
 
 - [OWASP email validation and verification](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html): single-use expiring proofs and sensitive-token handling.
 - [Nodemailer SMTP transport](https://nodemailer.com/smtp): standard SMTP integration with explicit transport settings.
+- [Google App Passwords](https://support.google.com/accounts/answer/185833): account eligibility, 2-Step Verification and dedicated application credentials.
+- [Gmail sending limits](https://support.google.com/mail/answer/22839): per-account delivery limits and recovery; this is a small-volume sender, not a public-scale delivery guarantee.
 - [Mailpit runtime options](https://mailpit.axllent.org/docs/configuration/runtime-options/): explicit bind addresses and bounded local message retention.
 - [Account pre-hijacking research](https://arxiv.org/abs/2205.10174): why mailbox proof must not inadvertently activate attacker-selected credentials or retained sessions.

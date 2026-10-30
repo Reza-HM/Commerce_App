@@ -3,7 +3,7 @@
   "info": {
     "title": "Commerce_App HTTP API",
     "version": "0.1.0",
-    "description": "Current local NestJS services: health, registration, verified-only account sessions and password-bound email verification through local captured email. Password recovery, external email and public deployment remain deferred. Browser account pages use these APIs directly. Application responses retain server correlation and nosniff; account/verification/error responses are no-store. JSON defaults to 1 MiB; compressed bodies are unsupported. Lower-level parser failures can be non-JSON. See docs/api/README.md and linked service guides for limits and operational behavior."
+    "description": "Current local NestJS services: health, registration, verified-only account sessions and password-bound email verification through authenticated Gmail SMTP (or explicitly selected local capture). Password recovery and public deployment remain deferred. Browser account pages use these APIs directly. Application responses retain server correlation and nosniff; account/verification/error responses are no-store. JSON defaults to 1 MiB; compressed bodies are unsupported. Lower-level parser failures can be non-JSON. See docs/api/README.md and linked service guides for limits and operational behavior."
   },
   "servers": [
     {
@@ -760,8 +760,8 @@
       "post": {
         "tags": ["Accounts"],
         "operationId": "requestEmailVerification",
-        "summary": "Request a local verification email",
-        "description": "Anonymous, non-credentialed JSON request. Unknown, verified and suppressed addresses share 202; no account is created and no delivery is promised. Eligible unverified accounts get a best-effort captured-mail attempt. One issuance per account per 60 seconds, three retained challenges, 30-minute expiry. Five parsed attempts per peer per 60 seconds, 1024 peer buckets; two issuance/delivery slots with no queue and five-second SMTP deadline. SMTP failures after persistence do not change 202; database failures during required work return 503, unexpected failures 500. No automatic retry, durable delivery, cookie or credential output. CORS permits Content-Type and X-Commerce-Request only for trusted origins, without credential grants. 429 Retry-After is a positive integer; saturation 503 has Retry-After 1. Operational guide: docs/email-verification.md.",
+        "summary": "Request a verification email",
+        "description": "Anonymous, non-credentialed JSON request. Unknown, verified and suppressed addresses share 202; no account is created and no delivery is promised. Eligible unverified accounts get a best-effort attempt through the configured mail provider. One issuance per account per 60 seconds, three retained challenges, 30-minute expiry. Five parsed attempts per peer per 60 seconds, 1024 peer buckets; two issuance/delivery slots with no queue and five-second SMTP deadline. SMTP failures after persistence do not change 202; database failures during required work return 503, unexpected failures 500. No automatic retry, durable delivery, cookie or credential output. CORS permits Content-Type and X-Commerce-Request only for trusted origins, without credential grants. 429 Retry-After is a positive integer; saturation 503 has Retry-After 1. Operational guide: docs/email-verification.md.",
         "security": [],
         "parameters": [
           {

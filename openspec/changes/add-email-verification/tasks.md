@@ -3,6 +3,10 @@
 Implementation was approved on 2026-10-30. Checked tasks record their required
 implementation and verification; remaining acceptance gates stay explicit.
 
+The owner extended acceptance to real email delivery after PR #14 and selected
+Gmail SMTP on 2026-10-30 because no owned domain is available. Sections 1-6 record
+the completed local-capture baseline; section 7 is required before overall completion.
+
 ## 1. Challenge persistence and rollout migration
 
 - [x] 1.1 Add the digest-only verification challenge schema, account linkage, indexes, and a new reviewed explicit migration with permanent revocation of existing unverified-account sessions; verify generated SQL/metadata review, prior migration hashes, and schema-constraint tests without editing existing history.
@@ -40,6 +44,14 @@ implementation and verification; remaining acceptance gates stay explicit.
 - [x] 6.1 Update existing unit, browser, local-origin, smoke, and live fixtures to use explicit verified fixtures or the real verification journey as appropriate; verify all existing cases remain meaningful, the local SMTP fixture is isolated, and no test accesses private `.env`/developer inboxes or resets development data.
 - [x] 6.2 Exercise a synthetic journey through the actual loopback Mailpit inbox and normal web/API setup on localhost and 127.0.0.1 with matching configured origins; record actual delivery/browser evidence separately from doubles and guarded persistence evidence, including mail-down recovery and legacy-account verification.
 - [x] 6.3 Run `npm run format`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e`, `npm run test:smoke`, and successful guarded `npm run test:integration`, plus API docs lint/build and strict all-item OpenSpec validation; record platform/date/results, real migration coverage and rollback/sentinel outcomes, protected-byte checks, and any incomplete prerequisites before claiming implementation complete.
+
+## 7. Real inbox delivery follow-up
+
+- [x] 7.1 Replace the capture-only runtime default with Gmail configuration, fixed authenticated TLS SMTP, validated sender/App Password and exact trusted web origin; preserve explicit loopback capture and fail closed without Gmail configuration. Verify mode/configuration, TLS and sender-boundary tests without secrets in diagnostics.
+- [x] 7.2 Share the current English text/HTML message across both transports and preserve the five-second canceling total deadline, two owned delivery slots, no queue/retry, generic HTTP acknowledgment, safe events and shutdown. Verify authenticated transport, certificate/hostname failure, rejected recipients, interrupted/stalled delivery and resource cleanup using owned fixtures, with no ordinary external sends.
+- [x] 7.3 Add a Windows masked startup prompt that passes credentials only to the API process and restores its environment on exit; document Google setup, quota/failure recovery, recipient privacy, local-link reachability and explicit capture selection. Keep credentials out of files, shell history, browser bundles, logs and CI. Update API/service guides without changing HTTP behavior or CI/deployment/secrets infrastructure.
+- [x] 7.4 Use the owner-designated sender and recipient to confirm actual real-inbox receipt, intact link/fragment, password-bound confirmation and fresh explicit sign-in/sign-out. Keep this task incomplete until receipt and the journey are observed; do not substitute SMTP acceptance, Sent copies or capture evidence.
+- [ ] 7.5 Run final formatting/lint/types/unit/build/browser/smoke/guarded database/API-docs/OpenSpec gates, review protected files and exact delivery evidence, then deliver through the unchanged current-head PR helpers. Preserve the earlier PR/branch and record the actual follow-up PR/head/checks/merge. Do not claim the user's expanded task complete while 7.4 is missing.
 
 ## Workflow follow-up
 

@@ -27,6 +27,7 @@ async function unusedPort() {
 const runtimeEnv = (port) => ({
   ...process.env,
   NODE_ENV: 'production',
+  MAIL_PROVIDER: 'capture',
   MAIL_SMTP_HOST: '127.0.0.1',
   MAIL_SMTP_PORT: '1025',
   VERIFICATION_WEB_ORIGIN: 'http://127.0.0.1:3000',

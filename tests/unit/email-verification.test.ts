@@ -168,7 +168,7 @@ test('local SMTP captures the intended message and actually cancels stalled sock
     await sender.send('synthetic@example.test', token);
     expect(capture.messages.length).toBe(1);
     expect(capturedToken(capture.messages[0]) === token).toBe(true);
-    expect(capture.messages[0]).not.toContain('PRIVATE_PASSWORD');
+    expect(capture.messages[0].includes('PRIVATE_PASSWORD')).toBe(false);
   } finally {
     await capture.close();
   }
@@ -230,11 +230,15 @@ test('partial SMTP acceptance is uncertain and the owned socket is canceled', as
 test('mail configuration restricts transport and fixed links without exposing inputs', () => {
   const valid = {
     NODE_ENV: 'development',
+    MAIL_PROVIDER: 'capture',
     MAIL_SMTP_HOST: '127.0.0.1',
     MAIL_SMTP_PORT: '1025',
     VERIFICATION_WEB_ORIGIN: 'http://localhost:3000',
   };
-  expect(readMailConfiguration(valid, ['http://localhost:3000']).port).toBe(1025);
+  expect(readMailConfiguration(valid, ['http://localhost:3000'])).toMatchObject({
+    port: 1025,
+    provider: 'capture',
+  });
   for (const values of [
     { MAIL_SMTP_HOST: 'remote.invalid' },
     { MAIL_SMTP_HOST: '127.0.0.1.invalid' },

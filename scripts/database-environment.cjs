@@ -1,6 +1,6 @@
-const {existsSync, readFileSync} = require('node:fs');
-const {join} = require('node:path');
-const {parseEnv} = require('node:util');
+const { existsSync, readFileSync } = require('node:fs');
+const { join } = require('node:path');
+const { parseEnv } = require('node:util');
 
 function databaseEnvironment(env, mode, filename = join(__dirname, '../.env')) {
   let local = {};
@@ -9,24 +9,37 @@ function databaseEnvironment(env, mode, filename = join(__dirname, '../.env')) {
   } catch {
     throw new Error('Invalid local database environment');
   }
-  const result = {...env};
+  const result = { ...env };
   for (const [key, value] of Object.entries(local)) {
-    if (/^(DATABASE|TEST_DATABASE|MIGRATION_DATABASE)_(URL|POOL_MAX|ACQUIRE_TIMEOUT_MS|STATEMENT_TIMEOUT_MS)$/.test(key)
-      && result[key] === undefined) result[key] = value;
+    if (
+      /^(DATABASE|TEST_DATABASE|MIGRATION_DATABASE)_(URL|POOL_MAX|ACQUIRE_TIMEOUT_MS|STATEMENT_TIMEOUT_MS)$/.test(
+        key,
+      ) &&
+      result[key] === undefined
+    )
+      result[key] = value;
   }
-  result.NODE_ENV = mode === 'test' ? 'test' : result.NODE_ENV ?? mode;
+  result.NODE_ENV = mode === 'test' ? 'test' : (result.NODE_ENV ?? mode);
   return result;
 }
 
 function commandEnvironment(command, env = process.env, filename) {
   if (!['test:integration', 'db:migrate', 'dev:api'].includes(command)) return env;
-  const result = databaseEnvironment(env, command === 'test:integration' ? 'test' : 'development', filename);
+  const result = databaseEnvironment(
+    env,
+    command === 'test:integration' ? 'test' : 'development',
+    filename,
+  );
   // Allow the two supported local browser origins.
   // This is a command-only default: the API runtime still denies absent origins.
-  if (command === 'dev:api' && result.NODE_ENV === 'development' && result.WEB_ORIGINS === undefined) {
-    return {...result, WEB_ORIGINS: 'http://127.0.0.1:3000,http://localhost:3000'};
+  if (
+    command === 'dev:api' &&
+    result.NODE_ENV === 'development' &&
+    result.WEB_ORIGINS === undefined
+  ) {
+    return { ...result, WEB_ORIGINS: 'http://127.0.0.1:3000,http://localhost:3000' };
   }
   return result;
 }
 
-module.exports = {databaseEnvironment, commandEnvironment};
+module.exports = { databaseEnvironment, commandEnvironment };

@@ -125,16 +125,16 @@ owner's local session date. This is replay evidence, not a fresh-install claim.
 
 ## Local web acceptance (2026-10-28)
 
-| Gate | Result |
-| --- | --- |
-| `npm run lint` | Passed |
-| `npm run typecheck` | Passed |
-| `npm test` | Passed: 26 suites, 275 tests |
-| `npm run build` | Passed: database, API, and all web routes |
-| `npm run test:e2e` | Passed: 14 Chromium tests, including desktop/mobile account journeys |
-| `npm run test:smoke` | Passed: five API process checks |
-| `npm run docs:api:lint` / `npm run docs:api:build` | Passed; generated HTML remains ignored |
-| Strict OpenSpec validation | Passed: six current specifications and this change |
+| Gate                                               | Result                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| `npm run lint`                                     | Passed                                                               |
+| `npm run typecheck`                                | Passed                                                               |
+| `npm test`                                         | Passed: 26 suites, 275 tests                                         |
+| `npm run build`                                    | Passed: database, API, and all web routes                            |
+| `npm run test:e2e`                                 | Passed: 14 Chromium tests, including desktop/mobile account journeys |
+| `npm run test:smoke`                               | Passed: five API process checks                                      |
+| `npm run docs:api:lint` / `npm run docs:api:build` | Passed; generated HTML remains ignored                               |
+| Strict OpenSpec validation                         | Passed: six current specifications and this change                   |
 
 Focused request/session tests cover deadlines, response decoding, safe mappings,
 coalescing, navigation cancellation and late inspection versus sign-out. Browser

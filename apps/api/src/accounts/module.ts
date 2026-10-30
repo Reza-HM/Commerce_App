@@ -1,9 +1,19 @@
-import {Body, Controller, Delete, Get, Inject, Module, Post, Req, Res} from '@nestjs/common';
-import type {DynamicModule} from '@nestjs/common';
-import type {Request, Response} from 'express';
-import type {RegistrationService} from './service';
-import {sessionToken} from './sessions';
-import type {SessionService} from './sessions';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Module,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { DynamicModule } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import type { RegistrationService } from './service';
+import { sessionToken } from './sessions';
+import type { SessionService } from './sessions';
 
 const REGISTRATION = Symbol('registration');
 const SESSIONS = Symbol('sessions');
@@ -13,11 +23,17 @@ class AccountsController {
   constructor(@Inject(REGISTRATION) private readonly registration: RegistrationService) {}
 
   @Post('register')
-  async register(@Body() body: unknown, @Req() request: Request, @Res() response: Response) {
+  async register(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
     response.setHeader('Cache-Control', 'no-store');
     await this.registration.register(body, request.socket.remoteAddress ?? '[unknown]');
     if (!response.destroyed && !response.writableEnded) {
-      response.status(202).json({status: 'accepted', message: 'Registration request processed.'});
+      response
+        .status(202)
+        .json({ status: 'accepted', message: 'Registration request processed.' });
     }
   }
 }
@@ -26,21 +42,39 @@ class AccountsController {
 class SessionsController {
   constructor(@Inject(SESSIONS) private readonly sessions: SessionService) {}
   @Post()
-  async signIn(@Body() body: unknown, @Req() request: Request, @Res() response: Response) {
-    const {token, expires} = await this.sessions.signIn(body, request.socket.remoteAddress ?? '[unknown]');
+  async signIn(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    const { token, expires } = await this.sessions.signIn(
+      body,
+      request.socket.remoteAddress ?? '[unknown]',
+    );
     if (!response.destroyed && !response.writableEnded) {
-      response.cookie('__Host-commerce_session', token, {secure: true, httpOnly: true, sameSite: 'strict', path: '/', expires});
-      response.status(201).json({status: 'signed_in'});
+      response.cookie('__Host-commerce_session', token, {
+        secure: true,
+        httpOnly: true,
+        sameSite: 'strict',
+        path: '/',
+        expires,
+      });
+      response.status(201).json({ status: 'signed_in' });
     }
   }
   @Get('current')
   async current(@Req() request: Request, @Res() response: Response) {
     const accountId = await this.sessions.current(sessionToken(request.headers.cookie));
-    response.json({status: 'signed_in', accountId});
+    response.json({ status: 'signed_in', accountId });
   }
   @Delete('current')
   async signOut(@Req() request: Request, @Res() response: Response) {
-    response.clearCookie('__Host-commerce_session', {secure: true, httpOnly: true, sameSite: 'strict', path: '/'});
+    response.clearCookie('__Host-commerce_session', {
+      secure: true,
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/',
+    });
     await this.sessions.signOut(sessionToken(request.headers.cookie));
     response.status(204).end();
   }
@@ -48,7 +82,19 @@ class SessionsController {
 
 @Module({})
 export class AccountsModule {
-  static register(service: RegistrationService, sessions?: SessionService): DynamicModule {
-    return {module: AccountsModule, controllers: sessions ? [AccountsController, SessionsController] : [AccountsController], providers: [{provide: REGISTRATION, useValue: service}, ...(sessions ? [{provide: SESSIONS, useValue: sessions}] : [])]};
+  static register(
+    service: RegistrationService,
+    sessions?: SessionService,
+  ): DynamicModule {
+    return {
+      module: AccountsModule,
+      controllers: sessions
+        ? [AccountsController, SessionsController]
+        : [AccountsController],
+      providers: [
+        { provide: REGISTRATION, useValue: service },
+        ...(sessions ? [{ provide: SESSIONS, useValue: sessions }] : []),
+      ],
+    };
   }
 }

@@ -1,3 +1,6 @@
+# Maintained source uses LF on every platform (Prettier endOfLine=lf).
+* text=auto eol=lf
+
 # Preserve the exact bytes of the checksum-verified public password policy corpus.
 apps/api/src/accounts/assets/10k-most-common.txt -text
 

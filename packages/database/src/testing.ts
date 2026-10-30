@@ -1,5 +1,5 @@
-import {ConfigurationError, readDatabaseConfiguration} from './configuration';
-import type {DatabaseConfiguration, Environment} from './configuration';
+import { ConfigurationError, readDatabaseConfiguration } from './configuration';
+import type { DatabaseConfiguration, Environment } from './configuration';
 
 export function guardedTestConfiguration(env: Environment): DatabaseConfiguration {
   if (env.NODE_ENV !== 'test') throw new ConfigurationError('NODE_ENV');
@@ -9,7 +9,11 @@ export function guardedTestConfiguration(env: Environment): DatabaseConfiguratio
     const other = readDatabaseConfiguration(env, prefix);
     const a = test.connection;
     const b = other.connection;
-    const host = (value: string) => value.toLowerCase().replace(/\.$/, '').replace(/^(localhost|127\.0\.0\.1|::1)$/, 'loopback');
+    const host = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/\.$/, '')
+        .replace(/^(localhost|127\.0\.0\.1|::1)$/, 'loopback');
     if (host(a.host) === host(b.host) && a.port === b.port && a.database === b.database) {
       throw new ConfigurationError('TEST_DATABASE_URL (must be a dedicated target)');
     }

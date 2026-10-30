@@ -3,8 +3,8 @@ module.exports = {
   roots: ['<rootDir>/tests/unit'],
   testMatch: ['**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.test.json'}]
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.test.json' }],
   },
   clearMocks: true,
-  restoreMocks: true
+  restoreMocks: true,
 };

@@ -1,11 +1,20 @@
-import {PostgresSessionRepository} from '../../packages/database/src/sessions';
+import { PostgresSessionRepository } from '../../packages/database/src/sessions';
 
 test('session operations use the shared transaction and bound parameters', async () => {
-  const query = jest.fn().mockResolvedValueOnce({rows: []}).mockResolvedValueOnce({rows: [{account_id: 'account', password_hash: 'hash'}]})
-    .mockResolvedValueOnce({rows: [{absolute_expires_at: new Date(0)}]}).mockResolvedValueOnce({rows: [{account_id: 'account'}]})
-    .mockResolvedValueOnce({rows: []});
-  const repository = new PostgresSessionRepository({transaction: work => work({query} as never)});
-  expect(await repository.credential('a@example.test')).toEqual({accountId: 'account', passwordHash: 'hash'});
+  const query = jest
+    .fn()
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [{ account_id: 'account', password_hash: 'hash' }] })
+    .mockResolvedValueOnce({ rows: [{ absolute_expires_at: new Date(0) }] })
+    .mockResolvedValueOnce({ rows: [{ account_id: 'account' }] })
+    .mockResolvedValueOnce({ rows: [] });
+  const repository = new PostgresSessionRepository({
+    transaction: (work) => work({ query } as never),
+  });
+  expect(await repository.credential('a@example.test')).toEqual({
+    accountId: 'account',
+    passwordHash: 'hash',
+  });
   await repository.create('session', 'account', 'digest');
   expect(await repository.renew('digest')).toBe('account');
   await repository.revoke('digest');

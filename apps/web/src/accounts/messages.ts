@@ -1,1 +1,1 @@
-export type AccountMessages = typeof import('../../messages/en.json')['Accounts'];
+export type AccountMessages = (typeof import('../../messages/en.json'))['Accounts'];

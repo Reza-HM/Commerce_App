@@ -25,9 +25,7 @@
   "paths": {
     "/health/live": {
       "get": {
-        "tags": [
-          "Health"
-        ],
+        "tags": ["Health"],
         "operationId": "getLiveness",
         "summary": "Check HTTP process liveness",
         "description": "Independent of PostgreSQL and registration admission. No request body is needed. Remains live while the process can serve requests.",
@@ -73,9 +71,7 @@
     },
     "/health/ready": {
       "get": {
-        "tags": [
-          "Health"
-        ],
+        "tags": ["Health"],
         "operationId": "getReadiness",
         "summary": "Check dependency readiness",
         "description": "Fresh database probe with at most a two-second deadline including pool acquisition. Overlapping requests coalesce one active probe; completed results are not cached for later requests. Shutdown makes readiness unavailable. This does not establish account schema availability. Unexpected thrown failures use the generic 500 envelope.",
@@ -145,9 +141,7 @@
     },
     "/accounts/register": {
       "post": {
-        "tags": [
-          "Accounts"
-        ],
+        "tags": ["Accounts"],
         "operationId": "registerAccount",
         "summary": "Process email/password registration",
         "description": "Exactly email/password strings; unknown properties fail before email/password validation. Creates an unverified ordinary account and credential atomically if canonical email is absent; duplicates never replace credentials or timestamps. New and existing valid addresses both hash and return the same exact 202, without account IDs, existence flags, Location, cookie, token or email-delivery claim. SQL/network timing is not guaranteed constant. Five parsed attempts per direct socket peer per 60-second fixed window per process, at most 1024 live peer buckets; forwarded identity ignored. Field-invalid attempts consume peer budget; parser failures do not. Admission can return 429 before validation. After validation, at most two hash/persistence operations run, with no queue; saturation returns 503. A disconnect does not cancel admitted work. Restart resets peer limits; replicas multiply them.",
@@ -215,11 +209,7 @@
                     {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": [
-                        "error",
-                        "message",
-                        "requestId"
-                      ],
+                      "required": ["error", "message", "requestId"],
                       "properties": {
                         "error": {
                           "const": "http_400"
@@ -257,9 +247,7 @@
     },
     "/accounts/sessions": {
       "post": {
-        "tags": [
-          "Accounts"
-        ],
+        "tags": ["Accounts"],
         "operationId": "createAccountSession",
         "summary": "Sign in",
         "description": "Allows unverified accounts in this local milestone. Unknown and incorrect credentials return the same 401. Five parsed attempts per direct peer per 60 seconds, 1024 peer buckets; shares two password-work slots with registration. Send the required header and an allowed Origin when present.",
@@ -282,10 +270,7 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "email",
-                  "password"
-                ],
+                "required": ["email", "password"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -330,9 +315,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "status"
-                  ],
+                  "required": ["status"],
                   "properties": {
                     "status": {
                       "const": "signed_in"
@@ -360,11 +343,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -398,11 +377,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -436,11 +411,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -476,9 +447,7 @@
     },
     "/accounts/sessions/current": {
       "get": {
-        "tags": [
-          "Accounts"
-        ],
+        "tags": ["Accounts"],
         "operationId": "getCurrentAccountSession",
         "summary": "Inspect and renew current session",
         "description": "Expires after 30 minutes of inactivity or 12 hours after issuance, whichever comes first. Requires the custom header and allowed Origin when present.",
@@ -518,10 +487,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "status",
-                    "accountId"
-                  ],
+                  "required": ["status", "accountId"],
                   "properties": {
                     "status": {
                       "const": "signed_in"
@@ -553,11 +519,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -591,11 +553,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -629,11 +587,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -658,9 +612,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Accounts"
-        ],
+        "tags": ["Accounts"],
         "operationId": "deleteCurrentAccountSession",
         "summary": "Sign out",
         "description": "Revokes only the presented session and clears the cookie. Returns 503 if revocation cannot be determined.",
@@ -721,11 +673,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -759,11 +707,7 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": [
-                    "error",
-                    "message",
-                    "requestId"
-                  ],
+                  "required": ["error", "message", "requestId"],
                   "properties": {
                     "error": {
                       "type": "string"
@@ -836,9 +780,7 @@
       "ProbeOk": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status"
-        ],
+        "required": ["status"],
         "properties": {
           "status": {
             "const": "ok"
@@ -848,9 +790,7 @@
       "ProbeUnavailable": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status"
-        ],
+        "required": ["status"],
         "properties": {
           "status": {
             "const": "unavailable"
@@ -860,10 +800,7 @@
       "RegistrationRequest": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "email",
-          "password"
-        ],
+        "required": ["email", "password"],
         "properties": {
           "email": {
             "type": "string",
@@ -879,10 +816,7 @@
       "RegistrationAccepted": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "status",
-          "message"
-        ],
+        "required": ["status", "message"],
         "properties": {
           "status": {
             "const": "accepted"
@@ -895,13 +829,7 @@
       "RegistrationValidationError": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "error",
-          "message",
-          "field",
-          "code",
-          "requestId"
-        ],
+        "required": ["error", "message", "field", "code", "requestId"],
         "properties": {
           "error": {
             "const": "invalid_registration"
@@ -911,11 +839,7 @@
           },
           "field": {
             "type": "string",
-            "enum": [
-              "body",
-              "email",
-              "password"
-            ]
+            "enum": ["body", "email", "password"]
           },
           "code": {
             "type": "string",
@@ -963,11 +887,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "http_400"
@@ -1006,11 +926,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "http_413"
@@ -1049,11 +965,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "http_415"
@@ -1095,11 +1007,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "http_429"
@@ -1141,11 +1049,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "http_503"
@@ -1184,11 +1088,7 @@
             "schema": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "error",
-                "message",
-                "requestId"
-              ],
+              "required": ["error", "message", "requestId"],
               "properties": {
                 "error": {
                   "const": "internal_error"

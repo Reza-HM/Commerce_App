@@ -15,7 +15,9 @@
     "artDescription": "A space for what comes next.",
     "footer": "Commerce. Thoughtfully built.",
     "availability": "Account access available. Marketplace coming next.",
-    "skip": "Skip to content"
+    "skip": "Skip to content",
+    "brand": "commerce",
+    "artEdition": "C / 01"
   },
   "Accounts": {
     "home": "Commerce home",
@@ -80,6 +82,8 @@
     "passwordNewPlaceholder": "Create a memorable passphrase",
     "accountDetail": "CURRENT SESSION",
     "accountSession": "This browser",
-    "accountPrivacy": "Your account details stay private. Only your current session is managed here."
+    "accountPrivacy": "Your account details stay private. Only your current session is managed here.",
+    "brand": "commerce",
+    "studioEdition": "01 / COMMERCE"
   }
 }

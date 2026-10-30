@@ -11,10 +11,10 @@ export function Icon({name, className='size-5'}: {name:'arrow'|'lock'|'check'|'e
     {name==='eyeOff' && <><path d="m3 3 18 18M9 5.5A12 12 0 0 1 12 5c7 0 10 7 10 7a18 18 0 0 1-3 4M6 6C3 8 2 12 2 12s3 7 10 7a12 12 0 0 0 5-1m-7-8a3 3 0 0 0 4 4"/></>}
   </svg>;
 }
-export function Brand({label, inverse=false}: {label:string;inverse?:boolean}) {
+export function Brand({label, name, inverse=false}: {label:string;name:string;inverse?:boolean}) {
   return <Link href="/" aria-label={label} className={`inline-flex w-fit items-center gap-3 rounded-lg outline-offset-8 focus-visible:outline-2 ${inverse ? 'text-white' : 'text-ink'}`}>
     <span className={`grid size-9 place-items-center rounded-xl ${inverse ? 'bg-white/10 text-white' : 'bg-accent text-white'}`} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" className="size-6"><path d="m6 7 6-3 6 3v10l-6 3-6-3V7Z" stroke="currentColor" strokeWidth="1.5"/><path d="m6 7 6 4 6-4m-6 4v9" stroke="currentColor" strokeWidth="1.5"/></svg></span>
-    <span className="text-[22px] font-semibold tracking-[-.055em]">commerce<span className="text-accent" aria-hidden="true">.</span></span>
+    <span className="text-[22px] font-semibold tracking-[-.055em]">{name}<span className="text-accent" aria-hidden="true">.</span></span>
   </Link>;
 }
 export function PrimaryLink({href,children}: {href:string;children:ReactNode}) {

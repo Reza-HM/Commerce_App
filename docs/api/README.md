@@ -198,7 +198,9 @@ for hashing, migrations, database safeguards, lifecycle and validation evidence.
 
 `POST /accounts/sessions` accepts an email and password and returns
 `{"status":"signed_in"}` with a host-only Secure, HttpOnly, SameSite=Strict
-cookie. Unverified accounts can sign in during this local milestone. Sessions
+cookie. Only verified accounts can sign in. Correct credentials for an unverified
+account return 403 `verification_required` without a cookie or automatic email;
+unknown accounts and wrong passwords retain generic 401. Sessions
 expire after 30 minutes without authenticated activity or 12 hours after issue,
 whichever comes first. `GET /accounts/sessions/current` returns the account ID
 and renews activity; `DELETE /accounts/sessions/current` revokes the presented
@@ -213,8 +215,10 @@ test uses Chromium with the web origin `http://127.0.0.1:4173` and the API on
 Unknown accounts and incorrect passwords return the same generic 401. Sign-in admits five
 parsed attempts per direct peer per minute and shares two in-flight password work
 slots with registration. Expired and revoked rows are not automatically deleted.
-Verification and recovery are separate prerequisites for public launch; the future
-verification change must block unverified sign-in and address existing sessions.
+Local email verification is available; external delivery and recovery remain public
+launch prerequisites. The verification migration permanently revokes existing
+unverified-account sessions. Inspection also checks verification, and confirming
+email never revives an old session or automatically creates a new one.
 
 The browser flow calls these existing routes directly with credentials and the
 custom header. It never reads the HttpOnly cookie or exposes the account ID in
@@ -223,6 +227,47 @@ periodic polling. A session 401 prompts sign-in; network/403/server failures off
 retry without claiming confirmed sign-out. Failed DELETE responses retain an
 unconfirmed-revocation warning and a direct retry action. No HTTP contract or
 OpenAPI operation is added by these pages.
+
+## Email verification
+
+The [verification guide](../email-verification.md) covers local SMTP configuration,
+Mailpit setup, migration effects, limits, browser token privacy and validation.
+
+| Method/path                                 | JSON body                                                                             | Success                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `POST /accounts/email-verification/request` | `{"email":"reader@example.test"}`                                                     | 202 `{"status":"accepted","message":"Verification request processed."}` |
+| `POST /accounts/email-verification/confirm` | `{"token":"<emailed canonical base64url secret>","password":"<registered password>"}` | 200 `{"status":"verified"}`                                             |
+
+Both require `X-Commerce-Request: 1` and a trusted exact Origin when present. Browser
+requests omit credentials; no session/cookie is used or returned. Trusted-origin
+preflight allows Content-Type and the custom header without credential grants.
+All responses are no-store, nosniff and server-correlated. No verification GET
+operation exists; tokens are accepted only in confirmation JSON, never API URLs.
+
+Unknown, verified, eligible and suppressed addresses share request 202. It does not
+confirm account existence or mail delivery. Initial registration attempts mail only
+for newly committed accounts; duplicates preserve credentials and send no new mail.
+Post-commit initial preparation/mail failure preserves registration 202. Explicit
+request database failures use safe 503/500; later SMTP failure does not alter 202.
+
+Confirmation requires a single-use 32-random-byte token, live for 30 minutes, and the
+registered password with sign-in's Unicode/size policy. It atomically sets verification,
+invalidates sibling links and revokes all extant account sessions. It never resets
+the password or signs in. Unknown/expired/used tokens and wrong passwords share
+401 `invalid_verification` with fixed `Request rejected` message and requestId.
+Malformed fields/JSON return 400; body/media limits keep 413/415. Origin/header failures
+return 403. Unexpected response content is never reflected as trusted product text.
+
+Request and confirmation each admit five parsed attempts per direct peer per
+60-second process window, at most 1024 peer buckets; forwarded identity is ignored.
+Confirmation shares two expensive-work slots with registration/sign-in. Issuance and
+SMTP share two separate slots with no queue and a canceling five-second SMTP deadline.
+Per-account issuance is at most once per 60 seconds with three retained challenges;
+suppression stays generic 202. Expired rows are pruned account-locally on issuance.
+Resend does not invalidate earlier live links; successful confirmation invalidates all.
+429 includes positive Retry-After; saturated/shutting-down/recognized-outage 503 uses
+Retry-After 1. No automatic SMTP retry or durable-delivery guarantee is provided.
+These are local controls, not distributed public abuse protection.
 
 ## Keeping documentation current
 

@@ -1,5 +1,59 @@
 import { apiOrigin, createAccountApi } from '../../apps/web/src/accounts/api';
 
+test('verification uses fixed noncredentialed POST and distinguishes sign-in feedback', async () => {
+  const send = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+  const api = createAccountApi(undefined, send);
+  send.mockResolvedValue(
+    new Response(
+      JSON.stringify({ status: 'accepted', message: 'Verification request processed.' }),
+      { status: 202 },
+    ),
+  );
+  expect(await api('requestVerification', { email: 'reader@example.test' })).toEqual({
+    ok: true,
+  });
+  expect(send).toHaveBeenLastCalledWith(
+    'http://127.0.0.1:3001/accounts/email-verification/request',
+    expect.objectContaining({
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json', 'X-Commerce-Request': '1' },
+    }),
+  );
+  send.mockResolvedValue(
+    new Response(JSON.stringify({ status: 'verified' }), { status: 200 }),
+  );
+  expect(
+    await api('confirmVerification', { token: 'synthetic', password: 'synthetic' }),
+  ).toEqual({ ok: true });
+  send.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        error: 'verification_required',
+        message: 'Email verification required',
+        requestId: 'synthetic',
+      }),
+      { status: 403 },
+    ),
+  );
+  expect(
+    await api('signIn', { email: 'reader@example.test', password: 'synthetic' }),
+  ).toEqual({ ok: false, code: 'verificationRequired' });
+  send.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        error: 'http_403',
+        message: 'Request rejected',
+        requestId: 'synthetic',
+      }),
+      { status: 403 },
+    ),
+  );
+  expect(
+    await api('signIn', { email: 'reader@example.test', password: 'synthetic' }),
+  ).toEqual({ ok: false, code: 'forbidden' });
+});
+
 test('public origin defaults only when absent and rejects destinations outside an origin', () => {
   expect(apiOrigin(undefined)).toBe('http://127.0.0.1:3001');
   expect(apiOrigin(undefined, 'localhost')).toBe('http://localhost:3001');

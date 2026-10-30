@@ -1,7 +1,11 @@
-import { test, expect } from '../e2e/account-fixture';
+import { test, expect, confirmEmail } from '../e2e/account-fixture';
 
 for (const hostname of ['localhost']) {
-  test(`local account journey on ${hostname}`, async ({ page, context }) => {
+  test(`local account journey on ${hostname}`, async ({
+    page,
+    context,
+    api: fixture,
+  }) => {
     const api = `http://${hostname}:4184`;
     const requests: string[] = [];
     page.on('request', (request) => {
@@ -18,6 +22,7 @@ for (const hostname of ['localhost']) {
     await expect(
       page.getByText('Registration request processed.', { exact: true }),
     ).toBeVisible();
+    await confirmEmail(page, fixture, 'A synthetic local passphrase');
     await page.goto(`http://${hostname}:4183/sign-in`);
     await page
       .getByLabel('Email address', { exact: true })

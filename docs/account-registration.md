@@ -1,8 +1,9 @@
 # Account registration
 
 Registration is available through the API and the [account browser flow](account-web-flow.md).
-Email verification/delivery and password recovery remain separate changes; verification
-and recovery are required before public launch. One ordinary account can later buy
+Email verification now uses [local captured delivery](email-verification.md), with
+registered-password confirmation before sign-in. External delivery and password
+recovery remain required before public launch. One ordinary account can later buy
 and sell. Registration grants no administrative privileges or business approval.
 
 ## Persistence and migrations
@@ -11,7 +12,8 @@ and sell. Registration grants no administrative privileges or business approval.
 `email_normalized` (up to 254 bytes, unique), database creation timestamp, and
 nullable email verification timestamp initially null. `account_passwords` has one
 primary/foreign `account_id` and a versioned `password_hash`. Its foreign key uses
-ON DELETE RESTRICT. Sessions are separate; no role, verification-token, or recovery table exists.
+ON DELETE RESTRICT. Sessions and digest-only email-verification challenges are separate;
+no exclusive role or password-recovery table exists.
 
 Review generated SQL, Drizzle snapshot and journal together:
 

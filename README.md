@@ -13,5 +13,7 @@ request/response examples, and the version-controlled OpenAPI contract. Run
 
 See [account registration](docs/account-registration.md) for the API-only
 email/password contract, password policy, local resource limits, and live
-persistence evidence. Sessions, browser flow, verification and recovery follow
-as separate changes.
+persistence evidence. The [browser account flow](docs/account-web-flow.md) includes
+[verified-only sessions](docs/account-sessions.md) and
+[local email verification](docs/email-verification.md). Password recovery, external
+email and public deployment remain deferred.

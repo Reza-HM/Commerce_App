@@ -6,10 +6,13 @@ import { verifyPassword } from './password-hasher';
 import { validateSignIn } from './validation';
 
 // Public synthetic credential; no account can authenticate with it.
-const dummy =
+export const dummyCredential =
   'scrypt$v1$131072$8$1$AAAAAAAAAAAAAAAAAAAAAA$bQbiN6Mfr3bkb6DjqTR2YqlqvN6gIv46C4kOjUaCecWcmJBpjLd-HbIAXvxRBqVJEau1alORl5tYpMxyV8OF2Q';
 export class SessionError extends Error {
-  constructor(readonly status: 400 | 401 | 403) {
+  constructor(
+    readonly status: 400 | 401 | 403,
+    readonly verificationRequired = false,
+  ) {
     super('Request rejected');
   }
 }
@@ -64,13 +67,15 @@ export class SessionService {
       );
       const valid = await this.verify(
         input.passwordNormalized,
-        credential?.passwordHash ?? dummy,
+        credential?.passwordHash ?? dummyCredential,
       );
       if (!credential || !valid) throw new SessionError(401);
+      if (!credential.emailVerified) throw new SessionError(403, true);
       const token = randomBytes(32).toString('base64url');
       const expires = await this.db(() =>
         this.repository.create(randomUUID(), credential.accountId, digest(token)),
       );
+      if (!expires) throw new SessionError(403, true);
       return { token, expires };
     } finally {
       release();

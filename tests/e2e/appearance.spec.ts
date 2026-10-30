@@ -11,7 +11,14 @@ for (const width of [1440, 375]) {
     await expect(theme).toHaveValue('system');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await theme.selectOption('dark');
-    for (const path of ['/', '/register', '/sign-in', '/account']) {
+    for (const path of [
+      '/',
+      '/register',
+      '/sign-in',
+      '/account',
+      '/verify-email',
+      '/verify-email/request',
+    ]) {
       // Keep account rendering independent of external API availability.
       await page.route('**/accounts/sessions/current', (route) => route.abort());
       await page.goto(path);

@@ -61,3 +61,28 @@ export const accountSessions = pgTable(
     index('account_sessions_account_id_idx').on(table.accountId),
   ],
 );
+
+export const accountEmailVerifications = pgTable(
+  'account_email_verifications',
+  {
+    id: uuid('id').primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'restrict' }),
+    tokenDigest: varchar('token_digest', { length: 64 }).notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('account_email_verifications_digest_key').on(table.tokenDigest),
+    check(
+      'account_email_verifications_digest_check',
+      sql`${table.tokenDigest} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      'account_email_verifications_expiry_check',
+      sql`${table.expiresAt} = ${table.issuedAt} + interval '30 minutes'`,
+    ),
+    index('account_email_verifications_account_idx').on(table.accountId),
+  ],
+);

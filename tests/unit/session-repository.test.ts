@@ -4,7 +4,11 @@ test('session operations use the shared transaction and bound parameters', async
   const query = jest
     .fn()
     .mockResolvedValueOnce({ rows: [] })
-    .mockResolvedValueOnce({ rows: [{ account_id: 'account', password_hash: 'hash' }] })
+    .mockResolvedValueOnce({
+      rows: [
+        { account_id: 'account', password_hash: 'hash', email_verified_at: new Date(0) },
+      ],
+    })
     .mockResolvedValueOnce({ rows: [{ absolute_expires_at: new Date(0) }] })
     .mockResolvedValueOnce({ rows: [{ account_id: 'account' }] })
     .mockResolvedValueOnce({ rows: [] });
@@ -14,6 +18,7 @@ test('session operations use the shared transaction and bound parameters', async
   expect(await repository.credential('a@example.test')).toEqual({
     accountId: 'account',
     passwordHash: 'hash',
+    emailVerified: true,
   });
   await repository.create('session', 'account', 'digest');
   expect(await repository.renew('digest')).toBe('account');

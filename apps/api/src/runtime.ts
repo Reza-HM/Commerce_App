@@ -20,6 +20,7 @@ import { RegistrationValidationError } from './accounts/validation';
 import { RegistrationRejection } from './accounts/admission';
 import { SessionError } from './accounts/sessions';
 import type { SessionService } from './accounts/sessions';
+import { VerificationError, type VerificationService } from './accounts/verification';
 
 export interface Resources {
   ready(): Promise<boolean>;
@@ -62,6 +63,17 @@ function safeError(response: Response, status: number) {
 class SafeExceptionFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
+    if (error instanceof VerificationError) {
+      if (error.status === 401) {
+        response.setHeader('Cache-Control', 'no-store');
+        response.status(401).json({
+          error: 'invalid_verification',
+          message: 'Request rejected',
+          requestId: response.getHeader('X-Request-Id'),
+        });
+      } else safeError(response, 400);
+      return;
+    }
     if (error instanceof RegistrationValidationError) {
       response.setHeader('Cache-Control', 'no-store');
       response.status(400).json({
@@ -79,6 +91,15 @@ class SafeExceptionFilter implements ExceptionFilter {
       return;
     }
     if (error instanceof SessionError) {
+      if (error.verificationRequired) {
+        response.setHeader('Cache-Control', 'no-store');
+        response.status(403).json({
+          error: 'verification_required',
+          message: 'Email verification required',
+          requestId: response.getHeader('X-Request-Id'),
+        });
+        return;
+      }
       if (error.status === 401) {
         response.setHeader('Cache-Control', 'no-store');
         response.status(401).json({
@@ -127,10 +148,13 @@ export async function createRuntime(
   log: Log = logEvent,
   registration?: RegistrationService,
   sessions?: SessionService,
+  verification?: VerificationService,
 ) {
   const state = { closing: false };
   @Module({
-    imports: registration ? [AccountsModule.register(registration, sessions)] : [],
+    imports: registration
+      ? [AccountsModule.register(registration, sessions, verification)]
+      : [],
     controllers: [HealthController],
     providers: [
       { provide: RESOURCE, useValue: database },
@@ -155,14 +179,19 @@ export async function createRuntime(
     // Log static route names only, including Express's case/trailing-slash aliases.
     const isRegistration = /^\/accounts\/register\/?$/i.test(request.path);
     const isSession = /^\/accounts\/sessions(?:\/current)?\/?$/i.test(request.path);
+    const isVerification =
+      /^\/accounts\/email-verification\/(?:request|confirm)\/?$/i.test(request.path);
     const path = isRegistration
       ? '/accounts/register'
       : isSession
         ? '/accounts/sessions'
-        : ['/health/live', '/health/ready'].includes(request.path)
-          ? request.path
-          : '[unmatched]';
-    if (isRegistration || isSession) response.setHeader('Cache-Control', 'no-store');
+        : isVerification
+          ? '/accounts/email-verification'
+          : ['/health/live', '/health/ready'].includes(request.path)
+            ? request.path
+            : '[unmatched]';
+    if (isRegistration || isSession || isVerification)
+      response.setHeader('Cache-Control', 'no-store');
     response.once('finish', () =>
       log({
         event: 'request_complete',
@@ -187,18 +216,22 @@ export async function createRuntime(
       response.setHeader('Vary', 'Origin');
       response.setHeader(
         'Access-Control-Allow-Methods',
-        isSession ? 'GET,POST,DELETE,OPTIONS' : 'GET,POST,OPTIONS',
+        isSession
+          ? 'GET,POST,DELETE,OPTIONS'
+          : isVerification
+            ? 'POST,OPTIONS'
+            : 'GET,POST,OPTIONS',
       );
       response.setHeader(
         'Access-Control-Allow-Headers',
-        isSession ? 'Content-Type,X-Commerce-Request' : 'Content-Type',
+        isSession || isVerification ? 'Content-Type,X-Commerce-Request' : 'Content-Type',
       );
       if (isSession) response.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     if (
-      isSession &&
+      (isSession || isVerification) &&
       request.method !== 'OPTIONS' &&
-      ((origin && !config.webOrigins.includes(origin)) ||
+      ((origin !== undefined && !config.webOrigins.includes(origin)) ||
         request.headers['x-commerce-request'] !== '1')
     ) {
       safeError(response, 403);
@@ -252,6 +285,7 @@ export async function createRuntime(
       state.closing = true;
       log({ event: 'shutdown_started' });
       registration?.stop();
+      verification?.stop();
       shutdown = new Promise<number>((resolve) => {
         let done = false;
         const finish = (code: number) => {
@@ -268,7 +302,7 @@ export async function createRuntime(
         }, config.shutdownTimeoutMs);
         // Close ingress, drain established work, then close pool exactly once.
         server.close(() => {
-          void (registration?.drain() ?? Promise.resolve())
+          void Promise.all([registration?.drain(), verification?.drain()])
             .then(() => app.close())
             .then(() => closeResources())
             .then(

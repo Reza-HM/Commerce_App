@@ -27,6 +27,10 @@ async function unusedPort() {
 const runtimeEnv = (port) => ({
   ...process.env,
   NODE_ENV: 'production',
+  MAIL_SMTP_HOST: '127.0.0.1',
+  MAIL_SMTP_PORT: '1025',
+  VERIFICATION_WEB_ORIGIN: 'http://127.0.0.1:3000',
+  WEB_ORIGINS: 'http://127.0.0.1:3000',
   API_PORT: String(port),
   DATABASE_URL: 'postgres://fixture:private-password@127.0.0.1:1/unavailable',
   DATABASE_TLS_MODE: undefined,
@@ -97,6 +101,36 @@ test('production API replicas start with dependency unavailable and restart inde
   } finally {
     for (const child of children) await stop(child);
     await new Promise((resolve) => endpoint.close(resolve));
+  }
+});
+
+test('blocked captured-email work reaches the hard shutdown deadline after HTTP acknowledgment', async () => {
+  const child = fork(resolve('tests/fixtures/api-child.cjs'), ['verification'], {
+    env: { ...runtimeEnv(3001), API_SHUTDOWN_TIMEOUT_MS: '200' },
+    silent: true,
+  });
+  try {
+    const [{ port }] = await once(child, 'message');
+    const entered = once(child, 'message');
+    const response = fetch(
+      `http://127.0.0.1:${port}/accounts/email-verification/request`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Commerce-Request': '1' },
+        body: JSON.stringify({ email: 'synthetic@example.test' }),
+      },
+    );
+    const [event] = await entered;
+    assert.equal(event.event, 'verification_started');
+    assert.equal((await response).status, 202);
+    const exited = once(child, 'exit'),
+      started = performance.now();
+    child.send('close');
+    const [code] = await exited;
+    assert.equal(code, 1);
+    assert.ok(performance.now() - started < 2000);
+  } finally {
+    await stop(child);
   }
 });
 

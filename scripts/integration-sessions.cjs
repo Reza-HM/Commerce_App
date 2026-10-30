@@ -23,6 +23,9 @@ async function validateSessions(database, env) {
     const password = 'Synthetic live session phrase';
     const account = candidate(undefined, await hashPassword(password));
     await accounts.create(account);
+    await database.orm.execute(
+      sql`UPDATE accounts SET email_verified_at=clock_timestamp() WHERE id=${account.id}`,
+    );
     const sentinel = await make(account.id);
     const snapshot = async (id) =>
       (await database.orm.execute(sql`SELECT * FROM account_sessions WHERE id=${id}`))

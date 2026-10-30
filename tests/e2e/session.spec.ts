@@ -29,7 +29,7 @@ test('secure loopback cookie supports browser session lifecycle', async ({ page 
   const repository: SessionRepository = {
     credential: async (email) =>
       email === 'browser@example.test'
-        ? { accountId: id, passwordHash: hash }
+        ? { accountId: id, passwordHash: hash, emailVerified: true }
         : undefined,
     create: async (_sessionId, accountId, digest) => {
       records.set(digest, accountId);

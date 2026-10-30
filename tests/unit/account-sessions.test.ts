@@ -150,7 +150,11 @@ test('shutdown drains an admitted sign-in until its verifier settles', async () 
   });
   const service = new SessionService(
     {
-      credential: async () => ({ accountId: 'id', passwordHash: 'hash' }),
+      credential: async () => ({
+        accountId: 'id',
+        passwordHash: 'hash',
+        emailVerified: true,
+      }),
       create: async () => new Date(),
       renew: async () => undefined,
       revoke: async () => {},

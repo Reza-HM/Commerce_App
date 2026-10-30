@@ -37,7 +37,9 @@ test('sign-in, current session and sign-out enforce cookies and origin guards', 
   let unavailable = false;
   const repository: SessionRepository = {
     credential: async (email) =>
-      email === 'reader@example.com' ? { accountId, passwordHash: hash } : undefined,
+      email === 'reader@example.com'
+        ? { accountId, passwordHash: hash, emailVerified: true }
+        : undefined,
     create: async (_id, account, digest) => {
       sessions.set(digest, account);
       return new Date(Date.now() + 12 * 3600000);
@@ -179,7 +181,11 @@ test('disconnected sign-in retains password work until verification settles', as
   });
   const service = new SessionService(
     {
-      credential: async () => ({ accountId: randomUUID(), passwordHash: 'fixture' }),
+      credential: async () => ({
+        accountId: randomUUID(),
+        passwordHash: 'fixture',
+        emailVerified: true,
+      }),
       create: async () => new Date(),
       renew: async () => undefined,
       revoke: async () => {},

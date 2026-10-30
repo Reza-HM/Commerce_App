@@ -15,6 +15,13 @@
       "when": 1793049842639,
       "tag": "0001_confused_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793349215049,
+      "tag": "0002_email_verification",
+      "breakpoints": true
     }
   ]
 }

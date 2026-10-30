@@ -2,9 +2,10 @@
 const { readApiConfiguration } = require('../../apps/api/dist/configuration');
 const { createRuntime } = require('../../apps/api/dist/runtime');
 const { RegistrationService } = require('../../apps/api/dist/accounts/service');
+const { VerificationService } = require('../../apps/api/dist/accounts/verification');
 (async () => {
   const config = readApiConfiguration(process.env);
-  const registration = process.argv.includes('registration')
+  let registration = process.argv.includes('registration')
     ? new RegistrationService(
         {
           create: async () => {
@@ -19,6 +20,26 @@ const { RegistrationService } = require('../../apps/api/dist/accounts/service');
         },
       )
     : undefined;
+  let verification;
+  if (process.argv.includes('verification')) {
+    registration = new RegistrationService({
+      create: async () => ({ kind: 'existing' }),
+    });
+    verification = new VerificationService(
+      {
+        issue: async () => true,
+        lookup: async () => undefined,
+        confirm: async () => false,
+      },
+      registration,
+      {
+        send: () => {
+          process.send({ event: 'verification_started' });
+          return new Promise(() => undefined);
+        },
+      },
+    );
+  }
   const runtime = await createRuntime(
     config,
     {
@@ -30,6 +51,8 @@ const { RegistrationService } = require('../../apps/api/dist/accounts/service');
     },
     undefined,
     registration,
+    undefined,
+    verification,
   );
   await runtime.listen(0);
   process.send({ port: runtime.server.address().port });

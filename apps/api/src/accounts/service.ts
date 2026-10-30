@@ -46,9 +46,11 @@ export interface RegistrationOptions {
   readonly commonPasswords?: ReadonlySet<string>;
   readonly now?: () => number;
   readonly uuid?: () => string;
+  readonly verification?: { initial(email: string): Promise<void> };
 }
 
 export class RegistrationService {
+  private verification: RegistrationOptions['verification'];
   private readonly admission: RegistrationAdmission;
   private readonly commonPasswords: ReadonlySet<string>;
   private readonly hash: (password: string) => Promise<string>;
@@ -62,20 +64,27 @@ export class RegistrationService {
     this.admission = new RegistrationAdmission(options.now);
     this.hash = options.hash ?? hashPassword;
     this.uuid = options.uuid ?? randomUUID;
+    this.verification = options.verification;
+  }
+
+  setVerification(verification: NonNullable<RegistrationOptions['verification']>): void {
+    this.verification = verification;
   }
 
   async register(body: unknown, directPeer: string): Promise<void> {
     this.admission.admit(directPeer);
     const input = validateRegistration(body, this.commonPasswords);
     const release = this.admission.acquire();
+    let created = false;
     try {
       const passwordHash = await this.hash(input.passwordNormalized);
       try {
-        await this.repository.create({
+        const result = await this.repository.create({
           id: this.uuid(),
           emailNormalized: input.emailNormalized,
           passwordHash,
         });
+        created = result.kind === 'created';
       } catch (error) {
         if (isRegistrationDependencyUnavailable(error))
           throw new RegistrationRejection(503, 1);
@@ -83,6 +92,13 @@ export class RegistrationService {
       }
     } finally {
       release();
+    }
+    if (created && this.verification) {
+      // The account has committed. Mail preparation cannot change its public
+      // acceptance or invite callers to retry registration to replace a password.
+      try {
+        await this.verification.initial(input.emailNormalized);
+      } catch {}
     }
   }
 

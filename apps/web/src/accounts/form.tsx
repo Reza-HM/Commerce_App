@@ -135,6 +135,12 @@ export function AccountForm({
           <p className="text-xl font-medium">{m.accepted}</p>
           <p className="text-muted">{m.acceptedHelp}</p>
           <Link
+            href="/verify-email/request"
+            className="inline-flex min-h-11 items-center rounded font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {m.verificationRequestLink}
+          </Link>
+          <Link
             href="/sign-in"
             className="inline-flex min-h-12 items-center gap-4 rounded-xl bg-action px-5 py-3 text-sm font-semibold text-white hover:bg-action-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4"
           >
@@ -266,6 +272,12 @@ export function AccountForm({
           <p role="status" className="min-h-5 text-center text-xs text-muted">
             {pending ? m.pending : ''}
           </p>
+          <Link
+            href="/verify-email/request"
+            className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {m.verificationRequestLink}
+          </Link>
           <p className="border-t border-outline/70 pt-6 text-center text-[13px] text-muted">
             {mode === 'register' ? m.alreadyAccount : m.newAccount}{' '}
             <Link

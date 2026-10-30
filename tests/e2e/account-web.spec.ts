@@ -1,4 +1,4 @@
-import { test, expect } from './account-fixture';
+import { test, expect, confirmEmail, type Fixture } from './account-fixture';
 import type { Page, Route } from '@playwright/test';
 
 const email = 'flow@example.test';
@@ -13,13 +13,14 @@ async function fill(page: Page, secret = password, address = email) {
   await page.getByLabel('Email address', { exact: true }).fill(address);
   await page.getByLabel('Password', { exact: true }).fill(secret);
 }
-async function register(page: Page) {
+async function register(page: Page, api: Fixture) {
   await page.goto('/register');
   await fill(page);
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   await expect(
     page.getByText('Registration request processed.', { exact: true }),
   ).toBeVisible();
+  await confirmEmail(page, api, password);
 }
 async function signIn(page: Page) {
   await page.goto('/sign-in');
@@ -84,6 +85,13 @@ for (const width of [1280, 375]) {
         'The email or password is incorrect. Please try again.',
       );
       await expect(page.getByLabel('Password', { exact: true })).toHaveValue('');
+      await fill(page);
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+      await expect(page.getByRole('main').getByRole('alert')).toContainText(
+        'Confirm your email',
+      );
+      await confirmEmail(page, api, password);
+      await page.getByRole('link', { name: 'Sign in', exact: true }).click();
       await fill(page);
       await page.getByRole('button', { name: 'Sign in', exact: true }).click();
       await expect(page.getByText('You’re signed in', { exact: true })).toBeVisible();
@@ -246,8 +254,9 @@ test('pending submissions are locked and malformed or rate-limited results never
 
 test('sign-in uses generic errors and permits passwords outside new-password policy', async ({
   page,
+  api,
 }) => {
-  await register(page);
+  await register(page, api);
   await page.goto('/sign-in');
   await fill(page, 'short');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -265,11 +274,12 @@ test('sign-in uses generic errors and permits passwords outside new-password pol
 
 test('missing or unusable cookie redirects without signed-in presentation; server failures allow retry', async ({
   page,
+  api,
   context,
 }) => {
   await page.goto('/account');
   await expect(page).toHaveURL(/\/sign-in\?reason=session-required$/);
-  await register(page);
+  await register(page, api);
   // Discard the cookie returned by a real sign-in before inspection.
   await page.route(current, async (route) => {
     await context.clearCookies();
@@ -302,7 +312,7 @@ test('idle periods do not renew; foreground and history restoration recheck revo
   page,
   api,
 }) => {
-  await register(page);
+  await register(page, api);
   await signIn(page);
   const before = api.counts.current;
   await page.clock.install();
@@ -329,7 +339,7 @@ test('failed revocation keeps warning through foreground events and supports DEL
   page,
   api,
 }) => {
-  await register(page);
+  await register(page, api);
   await signIn(page);
   api.failRevocation(true);
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
@@ -347,8 +357,9 @@ test('failed revocation keeps warning through foreground events and supports DEL
 
 test('lost sign-out response remains uncertain and delayed inspection cannot affect navigation', async ({
   page,
+  api,
 }) => {
-  await register(page);
+  await register(page, api);
   await signIn(page);
   await page.route(current, async (route) => {
     if (route.request().method() === 'DELETE') {

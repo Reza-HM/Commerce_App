@@ -1,7 +1,8 @@
 # Account sessions
 
-The local API accepts email/password sign-in for both verified and unverified
-accounts. Each successful sign-in creates an independent opaque session; only a
+The local API accepts email/password sign-in only for verified accounts. Correct
+credentials for an unverified account return verification-required feedback without
+creating a session. Each successful sign-in creates an independent opaque session; only a
 SHA-256 digest is stored. See [the API guide](api/README.md#account-sessions) for
 the endpoints, cookie attributes, origin policy and local browser setup.
 
@@ -17,8 +18,9 @@ cheap unknown-account path, without a claim of identical database or network
 timing. Registration and sign-in share the two-operation per-process password-work
 budget. Sign-in has a separate local peer budget; neither is a distributed limit.
 
-The separate verification change must deny new unverified sign-ins and define the
-handling of already-issued sessions. Verification, recovery, secure deployment,
+The [verification flow](email-verification.md) permanently revokes pre-verification
+sessions and requires registered-password confirmation followed by explicit sign-in.
+Password recovery, external email, secure deployment,
 shared abuse protection and a bounded expired-session retention policy remain
 necessary before public deployment.
 

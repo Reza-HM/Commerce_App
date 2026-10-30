@@ -105,8 +105,16 @@ expiration. Run the existing guarded `npm run test:integration` separately for
 actual migration replay, rollback, exact owned cleanup and sentinel preservation.
 Never substitute the development database or reset a target to manufacture proof.
 
-This milestone still allows unverified sign-in. Email verification and password
-recovery remain separate launch prerequisites. Profile editing, dashboards,
+The [email-verification flow](email-verification.md) now blocks unverified sign-in,
+adds `/verify-email/request` and `/verify-email`, and requires explicit confirmation
+with the registered password. Old unverified sessions remain permanently revoked.
+Registration feedback offers conditional inbox guidance and resend navigation,
+without confirming delivery. Correct-password sign-in 403 verification feedback is
+distinct from a generic origin/header 403. Verification pages use the same themes,
+accessibility and finite request feedback; confirmation carries its token only in
+the incoming email fragment, removes it before interaction, and uses no-referrer.
+Token/password state never persists in browser storage. Password recovery and
+external email remain launch prerequisites. Profile editing, dashboards,
 marketplace features, session administration, shared abuse protection, session-row
 retention and secure public deployment are not established by this flow.
 

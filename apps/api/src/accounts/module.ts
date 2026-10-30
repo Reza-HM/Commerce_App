@@ -14,9 +14,38 @@ import type { Request, Response } from 'express';
 import type { RegistrationService } from './service';
 import { sessionToken } from './sessions';
 import type { SessionService } from './sessions';
+import type { VerificationService } from './verification';
 
 const REGISTRATION = Symbol('registration');
 const SESSIONS = Symbol('sessions');
+const VERIFICATION = Symbol('verification');
+
+@Controller('accounts/email-verification')
+class VerificationController {
+  constructor(@Inject(VERIFICATION) private readonly verification: VerificationService) {}
+  @Post('request')
+  async request(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.verification.request(body, request.socket.remoteAddress ?? '[unknown]');
+    if (!response.destroyed && !response.writableEnded)
+      response
+        .status(202)
+        .json({ status: 'accepted', message: 'Verification request processed.' });
+  }
+  @Post('confirm')
+  async confirm(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.verification.confirm(body, request.socket.remoteAddress ?? '[unknown]');
+    if (!response.destroyed && !response.writableEnded)
+      response.status(200).json({ status: 'verified' });
+  }
+}
 
 @Controller('accounts')
 class AccountsController {
@@ -85,15 +114,19 @@ export class AccountsModule {
   static register(
     service: RegistrationService,
     sessions?: SessionService,
+    verification?: VerificationService,
   ): DynamicModule {
     return {
       module: AccountsModule,
-      controllers: sessions
-        ? [AccountsController, SessionsController]
-        : [AccountsController],
+      controllers: [
+        AccountsController,
+        ...(sessions ? [SessionsController] : []),
+        ...(verification ? [VerificationController] : []),
+      ],
       providers: [
         { provide: REGISTRATION, useValue: service },
         ...(sessions ? [{ provide: SESSIONS, useValue: sessions }] : []),
+        ...(verification ? [{ provide: VERIFICATION, useValue: verification }] : []),
       ],
     };
   }

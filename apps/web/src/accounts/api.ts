@@ -1,4 +1,10 @@
-export type Action = 'register' | 'signIn' | 'current' | 'signOut';
+export type Action =
+  | 'register'
+  | 'signIn'
+  | 'current'
+  | 'signOut'
+  | 'requestVerification'
+  | 'confirmVerification';
 export type FailureCode =
   | 'configuration'
   | 'unavailable'
@@ -13,10 +19,15 @@ export type FailureCode =
   | 'passwordEncoding'
   | 'passwordSize'
   | 'passwordLength'
-  | 'passwordWeak';
+  | 'passwordWeak'
+  | 'verificationRequired'
+  | 'verificationInvalid';
 export type Result =
   { ok: true } | { ok: false; code: FailureCode; field?: 'email' | 'password' };
-type Credentials = { email: string; password: string };
+type Credentials =
+  | { email: string; password: string }
+  | { email: string }
+  | { token: string; password: string };
 
 export function apiOrigin(
   value: string | undefined,
@@ -47,6 +58,8 @@ const paths: Record<Action, string> = {
   signIn: '/accounts/sessions',
   current: '/accounts/sessions/current',
   signOut: '/accounts/sessions/current',
+  requestVerification: '/accounts/email-verification/request',
+  confirmVerification: '/accounts/email-verification/confirm',
 };
 const policy: Record<string, FailureCode> = {
   required: 'required',
@@ -92,14 +105,16 @@ export function createAccountApi(
     });
     const request = async (): Promise<Result> => {
       try {
-        const hasBody = action === 'register' || action === 'signIn';
+        const verification =
+          action === 'requestVerification' || action === 'confirmVerification';
+        const hasBody = action === 'register' || action === 'signIn' || verification;
         const response = await send(origin + paths[action], {
           method: hasBody ? 'POST' : action === 'signOut' ? 'DELETE' : 'GET',
           headers: {
             ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
             ...(action !== 'register' ? { 'X-Commerce-Request': '1' } : {}),
           },
-          credentials: action === 'register' ? 'omit' : 'include',
+          credentials: action === 'register' || verification ? 'omit' : 'include',
           cache: 'no-store',
           redirect: 'error',
           signal: controller.signal,
@@ -107,8 +122,26 @@ export function createAccountApi(
         });
         if (action === 'signOut' && response.status === 204) return { ok: true };
         const body: unknown = await response.json();
-        const expected = action === 'register' ? 202 : action === 'signIn' ? 201 : 200;
+        const expected =
+          action === 'register' || action === 'requestVerification'
+            ? 202
+            : action === 'signIn'
+              ? 201
+              : 200;
         if (response.status === expected && object(body)) {
+          if (
+            action === 'requestVerification' &&
+            body.status === 'accepted' &&
+            body.message === 'Verification request processed.' &&
+            Object.keys(body).length === 2
+          )
+            return { ok: true };
+          if (
+            action === 'confirmVerification' &&
+            body.status === 'verified' &&
+            Object.keys(body).length === 1
+          )
+            return { ok: true };
           if (
             action === 'register' &&
             body.status === 'accepted' &&
@@ -133,11 +166,25 @@ export function createAccountApi(
           )
             return { ok: true };
         }
+        if (response.status === 401 && action === 'confirmVerification')
+          return { ok: false, code: 'verificationInvalid' };
+        if (
+          response.status === 403 &&
+          action === 'signIn' &&
+          object(body) &&
+          body.error === 'verification_required' &&
+          body.message === 'Email verification required' &&
+          typeof body.requestId === 'string' &&
+          Object.keys(body).length === 3
+        )
+          return { ok: false, code: 'verificationRequired' };
         if (response.status === 401 && action !== 'register')
           return { ok: false, code: 'credentials' };
         if (response.status === 403) return { ok: false, code: 'forbidden' };
         if (response.status === 429) return { ok: false, code: 'limited' };
         if (response.status === 400) {
+          if (action === 'requestVerification')
+            return { ok: false, code: 'email', field: 'email' };
           if (
             action === 'register' &&
             object(body) &&

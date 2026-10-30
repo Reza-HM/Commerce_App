@@ -158,3 +158,23 @@ private environment loading remain unchanged. Validation passed: lint, typecheck
 277 unit tests across 27 suites, 14 Chromium tests with production builds, API
 documentation lint/build and strict OpenSpec validation. The original running
 checkout's generated development types were preserved during isolated validation.
+
+## Visual direction (2026-10-30)
+
+The home and account pages share an ink, warm-white, and electric-blue identity,
+editorial type, and a decorative code-native sculpture. Shared tokens live in
+Tailwind's theme; layout and interaction styling use static utilities. The only
+base CSS sets selection and semantic cursors, with a theme-defined entrance
+animation used through reduced-motion-aware utilities. Artwork is hidden from
+assistive technology and makes no inventory or account claims. Input focus,
+invalid states, pending actions, feedback, and touch targets are designed together.
+The owner requires this level of visual and interaction care for future work;
+see AGENTS.md. API and session behavior remain governed by the existing contracts.
+
+Validation for this visual revision: lint and type checking passed; 277 unit tests
+passed; all 16 main Chromium tests plus both localhost regressions passed with
+production builds. Strict OpenSpec validation passed for all seven items.
+Desktop (1440px) and mobile (375px) home/form screenshots and signed-in account
+screenshots were visually reviewed. Tests cover semantic cursors, 44px controls,
+keyboard navigation, associated errors, and narrow-screen overflow. Review images
+remain ignored in `.local/design-review/`.

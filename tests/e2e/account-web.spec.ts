@@ -28,7 +28,7 @@ test(`complete browser journey at ${width}px preserves registration, original cr
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   const posts:{path:string;headers:Record<string,string>;body:unknown}[]=[];
   page.on('request',request=>{if (request.method()==='POST' && request.url().startsWith(endpoint)) posts.push({path:new URL(request.url()).pathname,headers:request.headers(),body:request.postDataJSON()});});
-  await page.goto('/');await page.getByRole('link',{name:'Create an account',exact:true}).click();
+  await page.goto('/');await page.locator('section').getByRole('link',{name:'Create an account',exact:true}).click();
   await fill(page);await page.getByRole('button',{name:'Create account',exact:true}).click();
   await expect(page.getByText('Registration request processed.',{exact:true})).toBeVisible();
   expect(posts.map(post=>post.path)).toEqual(['/accounts/register']);
@@ -51,6 +51,7 @@ test(`complete browser journey at ${width}px preserves registration, original cr
   const cookies=await context.cookies();const session=cookies.find(cookie=>cookie.name==='__Host-commerce_session');
   // Never print a bearer value, including in a failed assertion's object diff.
   expect(!!session).toBe(true);expect(session?.secure).toBe(true);expect(session?.httpOnly).toBe(true);expect(session?.sameSite).toBe('Strict');
+  await page.screenshot({path:`.local/design-review/account-${width}.png`,fullPage:true});
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByText('You’re signed out.',{exact:true})).toBeVisible();
   const after=await page.evaluate(async url=>(await fetch(url,{headers:{'X-Commerce-Request':'1'},credentials:'include'})).status,current);

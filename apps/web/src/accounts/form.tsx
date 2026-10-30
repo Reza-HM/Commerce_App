@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import {Icon} from '../components/identity';
 import {useRouter} from 'next/navigation';
 import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
@@ -67,36 +68,36 @@ export function AccountForm({mode, messages: m}: {mode: 'register' | 'signIn'; m
       });
     }
   }
-  const inputClass='mt-2 w-full rounded-xl border border-outline bg-white px-4 py-3 text-base text-ink outline-offset-4 focus-visible:outline-2 focus-visible:outline-ink disabled:opacity-60';
-  const buttonClass='w-full rounded-xl bg-ink px-5 py-3 font-bold text-canvas outline-offset-4 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-ink disabled:cursor-wait disabled:opacity-60';
+  const inputClass='mt-2 min-h-13 w-full rounded-xl border border-outline bg-canvas/60 px-4 py-3.5 text-base text-ink outline-none transition duration-200 placeholder:text-slate-400 hover:border-slate-400 focus:border-accent focus:bg-white focus:ring-4 focus:ring-accent/10 aria-invalid:border-rose-600 aria-invalid:bg-rose-50/40 aria-invalid:focus:ring-rose-100 disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none';
+  const buttonClass='group flex min-h-13 w-full items-center justify-center gap-3 rounded-xl bg-accent px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-accent/15 transition duration-200 hover:bg-[#2944cf] hover:shadow-xl hover:shadow-accent/20 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4 disabled:cursor-wait disabled:opacity-65 disabled:shadow-none motion-reduce:transition-none';
   return <>
-    <noscript><p className="mb-6 rounded-xl border border-outline p-4 text-sm">{m.javascriptRequired}</p></noscript>
-    {reason && <p role="status" className="mb-6 rounded-xl border border-outline p-4 text-sm">{reason}</p>}
-    {accepted ? <div role="status" className="space-y-4">
+    <noscript><p className="mb-6 rounded-xl border border-outline bg-canvas p-4 text-sm leading-6">{m.javascriptRequired}</p></noscript>
+    {reason && <p role="status" className="mb-6 rounded-xl border border-outline bg-canvas p-4 text-sm leading-6">{reason}</p>}
+    {accepted ? <div role="status" className="space-y-4 rounded-2xl border border-outline bg-canvas p-6"><span className="grid size-12 place-items-center rounded-full bg-accent-soft text-accent"><Icon name="check"/></span>
       <p className="text-xl font-medium">{m.accepted}</p><p className="text-muted">{m.acceptedHelp}</p>
-      <Link href="/sign-in" className="inline-block rounded-xl bg-ink px-5 py-3 font-bold text-canvas outline-offset-4 focus-visible:outline-2">{m.signInLink}</Link>
-    </div> : <form ref={form} method="post" onSubmit={submit} noValidate className="space-y-6" aria-busy={pending}>
+      <Link href="/sign-in" className="inline-flex min-h-12 items-center gap-4 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-white hover:bg-[#2944cf] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4">{m.signInLink}</Link>
+    </div> : <form ref={form} method="post" onSubmit={submit} noValidate className="space-y-5" aria-busy={pending}>
       <div>
-        <label htmlFor="email" className="text-sm font-bold">{m.email}</label>
-        <input ref={email} id="email" name="email" type="text" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required disabled={pending}
+        <label htmlFor="email" className="text-[13px] font-semibold">{m.email}</label>
+        <input ref={email} id="email" name="email" type="text" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder={m.emailPlaceholder} required disabled={pending}
           aria-invalid={error?.field === 'email'} aria-describedby={error?.field === 'email' ? 'email-error' : undefined} className={inputClass}/>
-        {error?.field === 'email' && <p id="email-error" role="alert" className="mt-2 text-sm font-bold">{m.errors[error.code]}</p>}
+        {error?.field === 'email' && <p id="email-error" role="alert" className="mt-2 text-sm font-medium text-rose-700">{m.errors[error.code]}</p>}
       </div>
       <div>
-        <label htmlFor="password" className="text-sm font-bold">{m.password}</label>
-        <input ref={password} id="password" name="password" type={visible ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} required disabled={pending}
-          aria-invalid={error?.field === 'password'} aria-describedby={[mode === 'register' ? 'password-help' : '',error?.field === 'password' ? 'password-error' : ''].filter(Boolean).join(' ') || undefined} className={inputClass}/>
-        <button type="button" aria-controls="password" aria-pressed={visible} onClick={() => setVisible(value => !value)} className="mt-2 rounded px-1 py-2 text-sm font-bold underline underline-offset-4 outline-offset-2 focus-visible:outline-2">{visible ? m.hidePassword : m.showPassword}</button>
-        {mode === 'register' && <p id="password-help" className="mt-2 text-sm leading-6 text-muted">{m.passwordHelp}</p>}
-        {error?.field === 'password' && <p id="password-error" role="alert" className="mt-2 text-sm font-bold">{m.errors[error.code]}</p>}
+        <label htmlFor="password" className="text-[13px] font-semibold">{m.password}</label>
+        <div className="relative"><input ref={password} id="password" name="password" type={visible ? 'text' : 'password'} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} placeholder={mode === 'register' ? m.passwordNewPlaceholder : m.passwordPlaceholder} required disabled={pending}
+          aria-invalid={error?.field === 'password'} aria-describedby={[mode === 'register' ? 'password-help' : '',error?.field === 'password' ? 'password-error' : ''].filter(Boolean).join(' ') || undefined} className={inputClass+' pr-14'}/>
+        <button type="button" aria-label={visible ? m.hidePassword : m.showPassword} title={visible ? m.hidePassword : m.showPassword} aria-controls="password" aria-pressed={visible} onClick={() => setVisible(value => !value)} className="absolute top-3 right-1 grid size-11 place-items-center rounded-lg text-muted transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"><Icon name={visible ? 'eyeOff' : 'eye'}/></button></div>
+        {mode === 'register' && <p id="password-help" className="mt-3 text-xs leading-6 text-muted">{m.passwordHelp}</p>}
+        {error?.field === 'password' && <p id="password-error" role="alert" className="mt-2 text-sm font-medium text-rose-700">{m.errors[error.code]}</p>}
       </div>
-      <div ref={feedback} tabIndex={-1} className="rounded outline-offset-4 focus-visible:outline-2">
-        {error && !error.field && <p role="alert" className="text-sm font-bold leading-6">{m.errors[error.code]}</p>}
+      <div ref={feedback} tabIndex={-1} className="rounded outline-offset-4 empty:hidden focus-visible:outline-2">
+        {error && !error.field && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-800">{m.errors[error.code]}</p>}
       </div>
-      <button type="submit" disabled={pending} className={buttonClass}>{mode === 'register' ? m.registerSubmit : m.signInSubmit}</button>
-      <p role="status" className="min-h-6 text-sm text-muted">{pending ? m.pending : ''}</p>
-      <p className="text-sm text-muted">{mode === 'register' ? m.alreadyAccount : m.newAccount}{' '}
-        <Link href={mode === 'register' ? '/sign-in' : '/register'} className="rounded font-bold text-ink underline underline-offset-4 outline-offset-4 focus-visible:outline-2">{mode === 'register' ? m.signInLink : m.registerLink}</Link>
+      <button type="submit" disabled={pending} className={buttonClass}>{pending && <span aria-hidden="true" className="size-4 rounded-full border-2 border-white/30 border-t-white motion-safe:animate-spin"/>}{mode === 'register' ? m.registerSubmit : m.signInSubmit}{!pending && <Icon name="arrow" className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"/>}</button>
+      <p role="status" className="min-h-5 text-center text-xs text-muted">{pending ? m.pending : ''}</p>
+      <p className="border-t border-outline/70 pt-6 text-center text-[13px] text-muted">{mode === 'register' ? m.alreadyAccount : m.newAccount}{' '}
+        <Link href={mode === 'register' ? '/sign-in' : '/register'} className="rounded py-2 font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4">{mode === 'register' ? m.signInLink : m.registerLink}</Link>
       </p>
     </form>}
   </>;

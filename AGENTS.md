@@ -10,6 +10,24 @@
 - Prefer complete, statically detectable utility classes over dynamically
   constructed class names. Preserve responsive behavior and accessibility.
 
+## Product quality and design direction
+
+- The owner requires a premium, contemporary interface with distinctive visual
+  direction, professional execution, and considered detail throughout the project.
+  Treat the current redesign as a baseline to improve, not a finished design ceiling.
+- Plan typography, spacing, color, hierarchy, artwork, and responsive composition
+  as one coherent system. Avoid default-looking forms and generic dashboard layouts.
+- Attend to the full interaction: correct pointer/text/wait/disabled cursors,
+  keyboard focus, hover/active/pending/error/success states, useful feedback,
+  touch targets, autofill, password managers, and navigation continuity.
+- Motion must respect reduced-motion preferences. Maintain readable contrast,
+  persistent labels, announced feedback, zoom support, and narrow-screen usability.
+- Verify real desktop and mobile rendering, keyboard use, and complete browser
+  journeys. Decorative polish must preserve privacy, security, performance, and
+  honest product claims; never invent unavailable features or account data.
+- Apply the same care to backend correctness and operational behavior. Preserve
+  server authority, safe failure states, explicit contracts, and meaningful tests.
+
 ## OpenSpec and Git
 
 - Keep OpenSpec configuration and the repository's reusable OpenSpec skills in

@@ -266,6 +266,31 @@ or an operator-supplied private process environment.
 Existing migrations, policy assets, archives, skills, CI, delivery helpers and
 database-only environment loading are unchanged.
 
+## Confirmed Gmail delivery: 2026-10-30
+
+The implementation follow-up shipped through
+[PR #15](https://github.com/Reza-HM/Commerce_App/pull/15) from
+`feat/add-real-email-delivery`, reviewed head
+`67fdb1762880ceaebc1d24d061b2904fc6639d15`. Both required `quality` and `database`
+jobs succeeded in [CI run 41097503096](https://github.com/Reza-HM/Commerce_App/actions/runs/41097503096).
+The unchanged helper checked the current head/base, reviews and enforced protection,
+then conditionally squash-merged into `main` as
+`894f2fbd9224a18a5d4dce4d35f0a8c879b6f926`. A separate GitHub read confirmed the
+merged head and commit. The original PR #14 and both implementation branches remain
+retained. All 25 implementation/acceptance tasks are complete; specification sync
+and archive remain a separate finalization action.
+
+Local operator setup also applied the already-reviewed verification migration to the
+development target after a private logical backup under ignored `.local/`. Preflight
+found no currently usable affected sessions. The migration retained all eight existing
+unverified-session rows, marked them revoked, and added the required challenge relation;
+it did not reset the database or replace accounts/passwords. A separate hidden API
+process was started with the Gmail sender and a dedicated App Password supplied only
+in memory. Its database readiness returned HTTP 200 on port 3001. The startup command
+finishes database/API compilation before requesting the credential, so build tooling
+does not inherit the newly entered App Password. Process interruption or a restart
+still requires supplying the credential again through the documented private setup.
+
 ## Initial capture acceptance: 2026-10-30 (PR #14)
 
 Local acceptance used Windows, Node 24.20.0, npm 12.2.0 and PostgreSQL 18.6.

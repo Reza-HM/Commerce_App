@@ -277,8 +277,13 @@ The unchanged helper checked the current head/base, reviews and enforced protect
 then conditionally squash-merged into `main` as
 `894f2fbd9224a18a5d4dce4d35f0a8c879b6f926`. A separate GitHub read confirmed the
 merged head and commit. The original PR #14 and both implementation branches remain
-retained. All 25 implementation/acceptance tasks are complete; specification sync
-and archive remain a separate finalization action.
+retained. All 25 implementation/acceptance tasks are complete. At the owner's explicit
+finalization request, the four capability deltas were synced into current specifications
+and the eight planning files were archived unchanged under
+`openspec/changes/archive/2026-10-30-add-email-verification/`. Existing specification
+Purpose sections and unrelated scenarios were preserved. Strict validation passes all
+nine current specifications, and no active OpenSpec changes remain. Finalization and
+handoff records are maintained in [PR #16](https://github.com/Reza-HM/Commerce_App/pull/16).
 
 Local operator setup also applied the already-reviewed verification migration to the
 development target after a private logical backup under ignored `.local/`. Preflight

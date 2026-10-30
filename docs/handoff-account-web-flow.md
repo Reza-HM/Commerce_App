@@ -1,5 +1,9 @@
 # Commerce App handoff: account web flow finalized
 
+This is the historical web-flow handoff. Email verification and real Gmail delivery
+have since been completed; use [the current handoff](handoff-email-verification.md).
+The deferred-verification notes below describe the earlier milestone only.
+
 Prepared on 2026-10-30. Continue at
 `C:\Users\reza\Desktop\MyProjects\Commerce_App`.
 

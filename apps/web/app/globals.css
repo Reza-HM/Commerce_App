@@ -1,25 +1,118 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-@theme {
-  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: Georgia, "Times New Roman", serif;
-  --color-canvas: #f8f9fc;
-  --color-ink: #192238;
-  --color-muted: #5c6679;
-  --color-outline: #d9deea;
-  --color-accent: #3855e8;
-  --color-accent-soft: #eef0ff;
+@theme inline {
+  --font-sans: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --color-canvas: var(--ui-canvas);
+  --color-surface: var(--ui-surface);
+  --color-ink: var(--ui-ink);
+  --color-muted: var(--ui-muted);
+  --color-outline: var(--ui-outline);
+  --color-accent: var(--ui-accent);
+  --color-accent-soft: var(--ui-accent-soft);
+  --color-action: var(--ui-action);
+  --color-action-hover: var(--ui-action-hover);
+  --color-danger: var(--ui-danger);
+  --color-danger-soft: var(--ui-danger-soft);
+  --color-danger-outline: var(--ui-danger-outline);
+  --color-placeholder: var(--ui-placeholder);
   --color-night: #151e33;
-  --animate-enter: enter 650ms ease-out both;
+  --animate-enter: enter 360ms ease-out both;
+  --animate-feedback: feedback 240ms ease-out both;
   @keyframes enter {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes feedback {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
+/* CSS variables are the shared palette; CSS media fallback also works without JS. */
 @layer base {
-  ::selection { @apply bg-accent text-white; }
-  button:not(:disabled), a { @apply cursor-pointer; }
-  button:disabled { @apply cursor-not-allowed; }
-  input { @apply cursor-text; }
+  :root {
+    color-scheme: light;
+    --ui-canvas: #f8f9fc;
+    --ui-surface: #ffffff;
+    --ui-ink: #192238;
+    --ui-muted: #5c6679;
+    --ui-outline: #d9deea;
+    --ui-accent: #3855e8;
+    --ui-accent-soft: #eef0ff;
+    --ui-action: #3855e8;
+    --ui-action-hover: #2944cf;
+    --ui-danger: #b42336;
+    --ui-danger-soft: #fff1f2;
+    --ui-danger-outline: #f4b8c2;
+    --ui-placeholder: #68758c;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --ui-canvas: #101622;
+    --ui-surface: #171f2f;
+    --ui-ink: #edf1fc;
+    --ui-muted: #a7b2c6;
+    --ui-outline: #37445c;
+    --ui-accent: #acbbff;
+    --ui-accent-soft: #26324e;
+    --ui-action: #4b63df;
+    --ui-action-hover: #5267df;
+    --ui-danger: #ffb4bf;
+    --ui-danger-soft: #35232d;
+    --ui-danger-outline: #80505d;
+    --ui-placeholder: #929fb6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --ui-canvas: #101622;
+      --ui-surface: #171f2f;
+      --ui-ink: #edf1fc;
+      --ui-muted: #a7b2c6;
+      --ui-outline: #37445c;
+      --ui-accent: #acbbff;
+      --ui-accent-soft: #26324e;
+      --ui-action: #4b63df;
+      --ui-action-hover: #5267df;
+      --ui-danger: #ffb4bf;
+      --ui-danger-soft: #35232d;
+      --ui-danger-outline: #80505d;
+      --ui-placeholder: #929fb6;
+    }
+  }
+  ::selection {
+    @apply bg-action text-white;
+  }
+  button:not(:disabled),
+  a {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+  input {
+    @apply cursor-text;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

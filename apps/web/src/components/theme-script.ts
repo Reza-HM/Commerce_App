@@ -1,0 +1,2 @@
+// Static, public-only bootstrap. Keep before body paint; never interpolate user input.
+export const themeBootstrap = `(function(){try{var p=localStorage.getItem('commerce-theme');document.documentElement.dataset.theme=p==='light'||p==='dark'?p:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch(e){document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}})();`;

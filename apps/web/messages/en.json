@@ -85,5 +85,11 @@
     "accountPrivacy": "Your account details stay private. Only your current session is managed here.",
     "brand": "commerce",
     "studioEdition": "01 / COMMERCE"
+  },
+  "Appearance": {
+    "label": "Appearance",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
   }
 }

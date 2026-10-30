@@ -28,6 +28,33 @@
 - Apply the same care to backend correctness and operational behavior. Preserve
   server authority, safe failure states, explicit contracts, and meaningful tests.
 
+## Appearance and motion
+
+- Support light and dark appearance from shared semantic tokens, including new
+  pages, native controls, errors, loading, empty, and success states. Default to
+  the system preference and retain the accessible System/Light/Dark selector.
+- Store only the appearance choice under commerce-theme. Apply it before paint;
+  never mix appearance storage with credentials, sessions, or authorization.
+- Keep motion brief and purposeful: 180ms control feedback, 240ms state feedback,
+  and up to 360ms entrances. Prefer opacity/transform and avoid layout shifts,
+  looping decorative effects, parallax, or artificial waiting. Respect reduced
+  motion, including hover/pressed transforms and progress effects; retain text.
+- Review both themes on desktop/mobile with keyboard, system changes, persistence,
+  and reduced motion. A future restrictive script CSP must authorize the static
+  theme bootstrap through a hash/nonce rather than silently disabling it.
+
+## Source formatting
+
+- Run npm run format and npm run format:check with the pinned project Prettier.
+  Use the committed 90-column, two-space, single-quote, semicolon style with LF.
+  Apply it to maintained frontend, backend, scripts, tests, and documentation.
+- Honor .prettierignore. Never reformat migration SQL/metadata, checksum-sensitive
+  policy assets, generated files, lockfiles, archived records, or reusable generated
+  skills. CI workflows remain separately reviewed; do not alter their contents
+  as part of routine formatting. SQL is deliberately outside Prettier's scope.
+- Keep a mechanical formatting commit separate from behavioral work on the same
+  branch so review can distinguish theme/motion changes from layout-only diffs.
+
 ## OpenSpec and Git
 
 - Keep OpenSpec configuration and the repository's reusable OpenSpec skills in

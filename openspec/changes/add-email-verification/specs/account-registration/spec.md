@@ -11,7 +11,7 @@ The API SHALL accept unauthenticated `POST /accounts/register` with a JSON objec
 - **WHEN** an admitted request supplies a valid email and password for a new address
 - **THEN** one unverified ordinary account and its password credential are committed
 - **AND** there is no cookie, authentication token, session, admin grant, or business approval
-- **AND** a separate password-bound email challenge is eligible for local captured delivery
+- **AND** a separate password-bound email challenge is eligible for the configured real delivery
 
 #### Scenario: Invalid shape or attempted privilege assignment
 
@@ -30,7 +30,7 @@ New and duplicate valid registrations SHALL return HTTP 202 with exactly `{"stat
 - **AND** no 201/409 distinction, duplicate-specific field, cookie, or authentication token appears
 - **AND** tests verify equal expensive-work paths without claiming perfectly constant network/database timing
 
-#### Scenario: Captured delivery fails after account commit
+#### Scenario: Delivery fails after account commit
 
 - **WHEN** initial challenge preparation or SMTP delivery fails after the account and credential committed
 - **THEN** the response remains the same generic 202 without claiming mail delivery

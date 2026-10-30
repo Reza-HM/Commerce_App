@@ -1,9 +1,9 @@
 # Account registration
 
 Registration is available through the API and the [account browser flow](account-web-flow.md).
-Email verification now uses [local captured delivery](email-verification.md), with
-registered-password confirmation before sign-in. External delivery and password
-recovery remain required before public launch. One ordinary account can later buy
+Email verification uses [authenticated Gmail delivery](email-verification.md), with
+registered-password confirmation before sign-in. Password recovery, secure deployment
+and shared abuse protection remain required before public launch. One ordinary account can later buy
 and sell. Registration grants no administrative privileges or business approval.
 
 ## Persistence and migrations

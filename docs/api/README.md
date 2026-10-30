@@ -215,7 +215,7 @@ test uses Chromium with the web origin `http://127.0.0.1:4173` and the API on
 Unknown accounts and incorrect passwords return the same generic 401. Sign-in admits five
 parsed attempts per direct peer per minute and shares two in-flight password work
 slots with registration. Expired and revoked rows are not automatically deleted.
-Local email verification is available; external delivery and recovery remain public
+Gmail-backed email verification is available; recovery and secure deployment remain public
 launch prerequisites. The verification migration permanently revokes existing
 unverified-account sessions. Inspection also checks verification, and confirming
 email never revives an old session or automatically creates a new one.
@@ -230,8 +230,9 @@ OpenAPI operation is added by these pages.
 
 ## Email verification
 
-The [verification guide](../email-verification.md) covers local SMTP configuration,
-Mailpit setup, migration effects, limits, browser token privacy and validation.
+The [verification guide](../email-verification.md) covers authenticated Gmail configuration,
+masked startup, explicit capture mode, migration effects, limits, browser token privacy
+and separate real-inbox acceptance. Ordinary tests/CI never send external email.
 
 | Method/path                                 | JSON body                                                                             | Success                                                                 |
 | ------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |

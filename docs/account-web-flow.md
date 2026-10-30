@@ -113,8 +113,9 @@ without confirming delivery. Correct-password sign-in 403 verification feedback 
 distinct from a generic origin/header 403. Verification pages use the same themes,
 accessibility and finite request feedback; confirmation carries its token only in
 the incoming email fragment, removes it before interaction, and uses no-referrer.
-Token/password state never persists in browser storage. Password recovery and
-external email remain launch prerequisites. Profile editing, dashboards,
+Token/password state never persists in browser storage. Gmail SMTP enables real
+inbox delivery; password recovery and secure deployment remain launch prerequisites.
+Profile editing, dashboards,
 marketplace features, session administration, shared abuse protection, session-row
 retention and secure public deployment are not established by this flow.
 

@@ -17,6 +17,8 @@
     "test": "node scripts/workspace.mjs test",
     "build": "node scripts/workspace.mjs build",
     "dev:api": "node scripts/workspace.mjs dev:api",
+    "dev:api:gmail": "node scripts/start-gmail-api.cjs",
+    "mail:gmail:accept": "node scripts/accept-gmail-delivery.cjs",
     "dev:web": "npm run dev --workspace @commerce/web",
     "start:api": "npm run start --workspace @commerce/api",
     "start:web": "npm run start --workspace @commerce/web",

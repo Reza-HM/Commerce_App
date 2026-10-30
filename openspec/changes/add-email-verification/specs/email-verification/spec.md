@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Establish control of an account's email through local captured email and explicit
+Establish control of an account's email through real email delivery and explicit
 password-bound confirmation, without creating sessions or exposing account existence.
 
 ## ADDED Requirements
@@ -36,7 +36,7 @@ A committed new account SHALL receive one bounded initial verification delivery 
 
 #### Scenario: Mail is unavailable or registration is duplicated
 
-- **WHEN** local delivery fails after account commit, capacity suppresses delivery, or the same address is registered again
+- **WHEN** delivery fails after account commit, capacity suppresses delivery, or the same address is registered again
 - **THEN** registration retains its generic 202 and preserves the stored credential
 - **AND** the interface explains how to request another message without promising that one arrived
 - **AND** delivery diagnostics contain only fixed safe event classifications
@@ -137,16 +137,25 @@ Request and confirmation SHALL each admit five parsed attempts per direct peer p
 - **THEN** slots remain held until underlying work settles or is canceled by its deadline
 - **AND** there is no unbounded task queue, automatic delivery retry, or promise of delivery surviving process failure
 
-### Requirement: Local captured email boundary
+### Requirement: Authenticated real email delivery
 
-Development email SHALL use an explicitly configured loopback SMTP capture service and loopback web origin. Links MUST use the configured web origin, never incoming Host/forwarded headers. Mail MUST contain an English text and HTML explanation, expiry, and verification link without passwords or session material. External delivery/relay MUST remain disabled; mail availability MUST NOT govern public-shell rendering or database readiness.
+Normal delivery SHALL use authenticated `smtp.gmail.com:465` over certificate-verified TLS 1.2 or newer. The sender MUST be the configured Gmail account with a dedicated server-only Google App Password. Gmail MUST be the default; capture MUST require explicit selection and MUST NOT be an automatic fallback.
 
-#### Scenario: Local setup is used or misconfigured
+#### Scenario: Real sender is configured or unavailable
 
-- **WHEN** the documented local capture service is running
-- **THEN** a synthetic message can be inspected in its loopback inbox and followed through the actual browser journey
-- **AND** remote hosts, URL credentials, paths, queries, fragments, invalid ports, or unsupported transport settings fail safe configuration validation without exposing values
-- **AND** private database environment loading is not broadened into mail or browser configuration
+- **WHEN** the operator configures the verified Gmail account and its dedicated App Password
+- **THEN** eligible messages are attempted through Google's fixed authenticated TLS endpoint to the actual recipient
+- **AND** missing/invalid credentials fail safe before listening, without exposing their values or switching to capture
+- **AND** sender identity cannot be changed by submitted email, Host, forwarding headers, SMTP URLs or configurable remote endpoints
+- **AND** a masked startup prompt may supply server-process credentials without saving them, printing them, or changing private database environment loading
+- **AND** fixed trusted-origin links and English text/HTML content include expiry instructions without passwords, session material, third-party artwork or tracking
+- **AND** mail availability does not govern public-shell rendering or database readiness
+
+#### Scenario: Capture is explicitly selected
+
+- **WHEN** automated tests or an operator explicitly select the capture provider
+- **THEN** only the validated loopback SMTP endpoint and synthetic sender are used
+- **AND** no Google credential or external email service is needed by ordinary tests or CI
 
 ### Requirement: Explicit verification browser journey
 
@@ -187,3 +196,10 @@ Verification SHALL use a new reviewed explicit migration, never startup DDL. Acc
 - **THEN** evidence distinguishes unit/browser SMTP doubles, actual local inbox delivery, and live database checks
 - **AND** fresh-install evidence is obtained only on a confirmed fresh test target, never by resetting a development or existing test database
 - **AND** missing live prerequisites remain incomplete gates and unrelated data, sessions, challenges, schema, and migration history remain preserved
+
+#### Scenario: Real delivery completion is assessed
+
+- **WHEN** the revised milestone is considered complete
+- **THEN** an owner-authorized message has actually arrived in the designated real inbox and its intact link has completed registered-password confirmation and explicit sign-in
+- **AND** SMTP acceptance, a Gmail Sent copy, local capture and test doubles alone are insufficient evidence of receipt
+- **AND** unavailable credentials, provider restrictions, delivery failure or unconfirmed receipt remain explicit incomplete acceptance gates

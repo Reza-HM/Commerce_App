@@ -11,7 +11,7 @@ import { logEvent, logStartupFailure } from './logging';
 import { RegistrationService } from './accounts/service';
 import { SessionService } from './accounts/sessions';
 import { VerificationService } from './accounts/verification';
-import { LocalVerificationSender, readMailConfiguration } from './accounts/mail';
+import { SmtpVerificationSender, readMailConfiguration } from './accounts/mail';
 
 async function main() {
   const config = readApiConfiguration(process.env);
@@ -25,7 +25,7 @@ async function main() {
   const verification = new VerificationService(
     new PostgresVerificationRepository(database),
     registration,
-    new LocalVerificationSender(mail),
+    new SmtpVerificationSender(mail),
     (event) => logEvent({ event }),
   );
   registration.setVerification(verification);

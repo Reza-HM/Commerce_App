@@ -1,7 +1,7 @@
-import {Pool} from 'pg';
-import type {PoolClient, PoolConfig} from 'pg';
-import {drizzle} from 'drizzle-orm/node-postgres';
-import type {DatabaseConfiguration} from './configuration';
+import { Pool } from 'pg';
+import type { PoolClient, PoolConfig } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import type { DatabaseConfiguration } from './configuration';
 
 export type DatabaseEvent = 'database_connection_failure' | 'database_probe_failure';
 export function poolOptions(config: DatabaseConfiguration): PoolConfig {
@@ -12,7 +12,7 @@ export function poolOptions(config: DatabaseConfiguration): PoolConfig {
     statement_timeout: config.statementTimeoutMs,
     query_timeout: config.statementTimeoutMs,
     idleTimeoutMillis: 30000,
-    application_name: 'commerce-foundation'
+    application_name: 'commerce-foundation',
   };
 }
 
@@ -23,12 +23,14 @@ export class Database {
   constructor(
     readonly config: DatabaseConfiguration,
     private readonly event: (event: DatabaseEvent) => void = () => undefined,
-    private readonly pool: Pool = new Pool(poolOptions(config))
+    private readonly pool: Pool = new Pool(poolOptions(config)),
   ) {
     this.orm = drizzle(this.pool);
     // pg removes idle clients when emitting pool errors. Never log the raw error.
     this.pool.on('error', () => this.event('database_connection_failure'));
-    this.pool.on('connect', client => client.on('error', () => this.event('database_connection_failure')));
+    this.pool.on('connect', (client) =>
+      client.on('error', () => this.event('database_connection_failure')),
+    );
   }
 
   async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -40,7 +42,11 @@ export class Database {
       await client.query('COMMIT');
       return result;
     } catch (error) {
-      try { await client.query('ROLLBACK'); } catch { discard = true; }
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        discard = true;
+      }
       throw error;
     } finally {
       client.release(discard);
@@ -50,7 +56,9 @@ export class Database {
   ready(): Promise<boolean> {
     if (this.closing) return Promise.resolve(false);
     if (!this.probe) {
-      this.probe = this.check().finally(() => { this.probe = undefined; });
+      this.probe = this.check().finally(() => {
+        this.probe = undefined;
+      });
     }
     return this.probe;
   }
@@ -67,30 +75,42 @@ export class Database {
       const acquisition = this.pool.connect();
       // Pool connectionTimeoutMillis cancels its own queue. A tighter readiness
       // deadline also disposes any client delivered after the probe has expired.
-      const acquired = acquisition.then(value => {
-        if (expired) { value.release(true); throw new Error('probe expired'); }
+      const acquired = acquisition.then((value) => {
+        if (expired) {
+          value.release(true);
+          throw new Error('probe expired');
+        }
         client = value;
         return value;
       });
-      const operation = acquired.then(async value => {
+      const operation = acquired.then(async (value) => {
         await value.query('SELECT 1');
         return true;
       });
-      const deadline = new Promise<false>(resolve => {
-        timer = setTimeout(() => {
-          expired = true;
-          // Destroying the checked-out socket cancels a stalled query. Never
-          // return a timed-out protocol stream to other consumers.
-          if (client) { client.release(true); client = undefined; }
-          resolve(false);
-        }, Math.max(1, budget - (performance.now() - started)));
+      const deadline = new Promise<false>((resolve) => {
+        timer = setTimeout(
+          () => {
+            expired = true;
+            // Destroying the checked-out socket cancels a stalled query. Never
+            // return a timed-out protocol stream to other consumers.
+            if (client) {
+              client.release(true);
+              client = undefined;
+            }
+            resolve(false);
+          },
+          Math.max(1, budget - (performance.now() - started)),
+        );
       });
       const ok = await Promise.race([operation, deadline]);
       if (!ok) this.event('database_probe_failure');
       return ok;
     } catch {
       this.event('database_probe_failure');
-      if (client) { client.release(true); client = undefined; }
+      if (client) {
+        client.release(true);
+        client = undefined;
+      }
       return false;
     } finally {
       if (timer) clearTimeout(timer);

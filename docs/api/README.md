@@ -51,14 +51,14 @@ through the explicit
 
 ## Current endpoints
 
-| Method | Path | Authentication | Normal result | Side effect |
-| --- | --- | --- | --- | --- |
-| GET | `/health/live` | None | 200 `{"status":"ok"}` | None; no dependency check |
-| GET | `/health/ready` | None | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}` | Bounded database probe |
-| POST | `/accounts/register` | None | 202 `{"status":"accepted","message":"Registration request processed."}` | Atomically creates an unverified account/credential if absent |
-| POST | `/accounts/sessions` | Email and password | 201 | Creates a session cookie |
-| GET | `/accounts/sessions/current` | Session cookie | 200 or 401 | Inspects and renews a session |
-| DELETE | `/accounts/sessions/current` | Optional session cookie | 204 | Revokes the presented session |
+| Method | Path                         | Authentication          | Normal result                                                           | Side effect                                                   |
+| ------ | ---------------------------- | ----------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| GET    | `/health/live`               | None                    | 200 `{"status":"ok"}`                                                   | None; no dependency check                                     |
+| GET    | `/health/ready`              | None                    | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}`                 | Bounded database probe                                        |
+| POST   | `/accounts/register`         | None                    | 202 `{"status":"accepted","message":"Registration request processed."}` | Atomically creates an unverified account/credential if absent |
+| POST   | `/accounts/sessions`         | Email and password      | 201                                                                     | Creates a session cookie                                      |
+| GET    | `/accounts/sessions/current` | Session cookie          | 200 or 401                                                              | Inspects and renews a session                                 |
+| DELETE | `/accounts/sessions/current` | Optional session cookie | 204                                                                     | Revokes the presented session                                 |
 
 Canonical paths are shown. Express also accepts case/trailing-slash aliases and
 implicitly handles HEAD for GET routes. Global OPTIONS requests without a body
@@ -155,14 +155,14 @@ flag, Location, cookie or token. Existing credentials never change. A retry afte
 disconnect can find an account already committed; account creation is not canceled
 by the client leaving. Equal hashing work does not promise constant SQL/network time.
 
-| Status | Meaning / body |
-| --- | --- |
-| 202 | Same accepted body for new and duplicate addresses |
-| 400 | Field/policy error `invalid_registration`, or generic parser `http_400` |
-| 413 / 415 | Generic body-limit / media-or-encoding error |
-| 429 | Generic `http_429`; positive integer `Retry-After` seconds |
-| 503 | Generic `http_503`; `Retry-After: 1` for saturation, shutdown, recognized database outage/timeout or missing account schema |
-| 500 | Generic `internal_error`; no raw failure details |
+| Status    | Meaning / body                                                                                                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 202       | Same accepted body for new and duplicate addresses                                                                          |
+| 400       | Field/policy error `invalid_registration`, or generic parser `http_400`                                                     |
+| 413 / 415 | Generic body-limit / media-or-encoding error                                                                                |
+| 429       | Generic `http_429`; positive integer `Retry-After` seconds                                                                  |
+| 503       | Generic `http_503`; `Retry-After: 1` for saturation, shutdown, recognized database outage/timeout or missing account schema |
+| 500       | Generic `internal_error`; no raw failure details                                                                            |
 
 Validation error example:
 

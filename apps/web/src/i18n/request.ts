@@ -1,4 +1,4 @@
-import {getRequestConfig} from 'next-intl/server';
+import { getRequestConfig } from 'next-intl/server';
 import messages from '../../messages/en.json';
 
-export default getRequestConfig(async()=>({locale:'en',messages}));
+export default getRequestConfig(async () => ({ locale: 'en', messages }));

@@ -38,11 +38,11 @@ Frontend styling uses Tailwind CSS utilities, with shared theme tokens in
 and theme configuration cannot express clearly; keep exceptions small, scoped,
 and explained. `AGENTS.md` and OpenSpec's context preserve this project convention.
 
-| Workspace | Ownership | Build |
-| --- | --- | --- |
-| `apps/web` | Next.js rendering and next-intl English resource | Framework-native modules |
-| `apps/api` | NestJS operational runtime | CommonJS and decorator metadata |
-| `packages/database` | Server-only PostgreSQL/Drizzle | Compiled CommonJS and declarations |
+| Workspace           | Ownership                                        | Build                              |
+| ------------------- | ------------------------------------------------ | ---------------------------------- |
+| `apps/web`          | Next.js rendering and next-intl English resource | Framework-native modules           |
+| `apps/api`          | NestJS operational runtime                       | CommonJS and decorator metadata    |
+| `packages/database` | Server-only PostgreSQL/Drizzle                   | Compiled CommonJS and declarations |
 
 The API imports `@commerce/database` through its compiled public entry point.
 Web cannot import database code, including in server-rendered modules. Apps cannot
@@ -62,22 +62,22 @@ dependencies; the expected warning and flag are test-only.
 Validation happens before listening/connecting. Diagnostics name settings, never
 values, credentials, URLs, or private file paths. Web exports no server values.
 
-| Setting | Default / rule |
-| --- | --- |
-| `NODE_ENV` | development, test, production; database commands/API development default to development; integration sets test |
-| `DATABASE_URL` | Local development/API connection and normal explicit migrations |
-| `TEST_DATABASE_URL` | Sole execution target for live integration, API test mode, and test-mode migrations |
-| `DATABASE_POOL_MAX` / `TEST_DATABASE_POOL_MAX` | 5 per process |
-| `DATABASE_ACQUIRE_TIMEOUT_MS` / test equivalent | 1000; effective maximum 1000 ms protects readiness |
-| `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline |
-| `API_PORT` | 3001; 1–65535 |
-| `WEB_ORIGINS` | Runtime default empty; root `dev:api` allows `http://127.0.0.1:3000` and `http://localhost:3000` only when absent in development; explicit values are exact HTTP(S) origins |
-| `NEXT_PUBLIC_API_ORIGIN` | Public web build setting; absent defaults to `http://localhost:3001` on localhost and `http://127.0.0.1:3001` otherwise; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
-| `API_BODY_LIMIT_BYTES` | 1048576 (1 MiB) |
-| `API_HEADER_LIMIT_BYTES` | 16384 (16 KiB) |
-| `API_HEADER_TIMEOUT_MS` | 5000; no greater than request timeout |
-| `API_REQUEST_TIMEOUT_MS` | 10000 |
-| `API_SHUTDOWN_TIMEOUT_MS` | 10000 |
+| Setting                                           | Default / rule                                                                                                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                        | development, test, production; database commands/API development default to development; integration sets test                                                                                                    |
+| `DATABASE_URL`                                    | Local development/API connection and normal explicit migrations                                                                                                                                                   |
+| `TEST_DATABASE_URL`                               | Sole execution target for live integration, API test mode, and test-mode migrations                                                                                                                               |
+| `DATABASE_POOL_MAX` / `TEST_DATABASE_POOL_MAX`    | 5 per process                                                                                                                                                                                                     |
+| `DATABASE_ACQUIRE_TIMEOUT_MS` / test equivalent   | 1000; effective maximum 1000 ms protects readiness                                                                                                                                                                |
+| `DATABASE_STATEMENT_TIMEOUT_MS` / test equivalent | 5000, client query and server statement deadline                                                                                                                                                                  |
+| `API_PORT`                                        | 3001; 1–65535                                                                                                                                                                                                     |
+| `WEB_ORIGINS`                                     | Runtime default empty; root `dev:api` allows `http://127.0.0.1:3000` and `http://localhost:3000` only when absent in development; explicit values are exact HTTP(S) origins                                       |
+| `NEXT_PUBLIC_API_ORIGIN`                          | Public web build setting; absent defaults to `http://localhost:3001` on localhost and `http://127.0.0.1:3001` otherwise; explicit values must be HTTP(S) origins without credentials/non-root path/query/fragment |
+| `API_BODY_LIMIT_BYTES`                            | 1048576 (1 MiB)                                                                                                                                                                                                   |
+| `API_HEADER_LIMIT_BYTES`                          | 16384 (16 KiB)                                                                                                                                                                                                    |
+| `API_HEADER_TIMEOUT_MS`                           | 5000; no greater than request timeout                                                                                                                                                                             |
+| `API_REQUEST_TIMEOUT_MS`                          | 10000                                                                                                                                                                                                             |
+| `API_SHUTDOWN_TIMEOUT_MS`                         | 10000                                                                                                                                                                                                             |
 
 On 2026-10-25 the owner explicitly removed database TLS requirements and supplied
 `commerce_db` and `commerce_test` on localhost:5432 in the ignored root `.env`.
@@ -212,17 +212,17 @@ printed, changed, or committed. This supersedes the earlier 4/18 partial checkpo
 
 Final validation on this checkpoint:
 
-| Command | Result |
-| --- | --- |
-| `npm run lint` | Passed |
-| `npm run typecheck` | Passed |
-| `npm test` | Passed: 12 suites, 102 tests |
-| `npm run build` | Passed: database, API, web |
-| `npm run test:e2e` | Passed: desktop/mobile production page, headers and secret scans |
-| `npm run test:smoke` | Passed: 3 API process checks |
-| `npm run test:integration` | Passed against commerce_test with the live outcomes above |
-| `openspec validate enable-account-persistence-validation --strict` | Passed |
-| `openspec validate --specs --strict` | Passed: 3 current main specs |
+| Command                                                            | Result                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `npm run lint`                                                     | Passed                                                           |
+| `npm run typecheck`                                                | Passed                                                           |
+| `npm test`                                                         | Passed: 12 suites, 102 tests                                     |
+| `npm run build`                                                    | Passed: database, API, web                                       |
+| `npm run test:e2e`                                                 | Passed: desktop/mobile production page, headers and secret scans |
+| `npm run test:smoke`                                               | Passed: 3 API process checks                                     |
+| `npm run test:integration`                                         | Passed against commerce_test with the live outcomes above        |
+| `openspec validate enable-account-persistence-validation --strict` | Passed                                                           |
+| `openspec validate --specs --strict`                               | Passed: 3 current main specs                                     |
 
 All revised persistence-validation tasks are complete. Non-empty account migration
 coverage belongs to the first migration-bearing feature; remaining pool-fault,
@@ -304,23 +304,23 @@ nonzero exits and are removed.
 
 Final clean-install verification on 2026-10-23 (Windows NT 10.0.28000.0):
 
-| Command / check | Result |
-| --- | --- |
-| `npm ci --no-fund` | Passed; lockfile unchanged (SHA-256 B344A7FBCEC038CD7C0F627A5F45652D7B5679C06F4E67F6E872DA9DAB380E45) |
-| `npm run lint` | Passed |
-| `npm run typecheck` | Passed from no prior build output |
-| `npm test` | Passed: 7 suites, 61 tests |
-| `npm run build` | Passed: database, API, web |
-| `npm run test:e2e` | Passed: Chromium desktop/mobile, headers, secret scans |
-| `npm run test:smoke` | Passed: 3 process tests |
-| `npm run test:integration` with `NODE_ENV=test` | Expected exit 1: missing TEST_DATABASE_URL; live execution deferred |
-| `npm run db:generate` | Passed: zero tables, no schema changes |
-| `npm run db:migrate` with explicit synthetic migration configuration | Passed: no pending migrations; no connection |
-| `npm run db:migrate` without migration target | Expected exit 1; no fallback |
-| `npm audit` | Passed: zero vulnerabilities |
-| `npm ls --workspaces --depth=0` | Passed: three workspaces |
-| `openspec validate initialize-store-foundation --strict` (before archive) | Passed |
-| Windows terminal Ctrl+C | API shutdown completed with code 0 |
+| Command / check                                                           | Result                                                                                                |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `npm ci --no-fund`                                                        | Passed; lockfile unchanged (SHA-256 B344A7FBCEC038CD7C0F627A5F45652D7B5679C06F4E67F6E872DA9DAB380E45) |
+| `npm run lint`                                                            | Passed                                                                                                |
+| `npm run typecheck`                                                       | Passed from no prior build output                                                                     |
+| `npm test`                                                                | Passed: 7 suites, 61 tests                                                                            |
+| `npm run build`                                                           | Passed: database, API, web                                                                            |
+| `npm run test:e2e`                                                        | Passed: Chromium desktop/mobile, headers, secret scans                                                |
+| `npm run test:smoke`                                                      | Passed: 3 process tests                                                                               |
+| `npm run test:integration` with `NODE_ENV=test`                           | Expected exit 1: missing TEST_DATABASE_URL; live execution deferred                                   |
+| `npm run db:generate`                                                     | Passed: zero tables, no schema changes                                                                |
+| `npm run db:migrate` with explicit synthetic migration configuration      | Passed: no pending migrations; no connection                                                          |
+| `npm run db:migrate` without migration target                             | Expected exit 1; no fallback                                                                          |
+| `npm audit`                                                               | Passed: zero vulnerabilities                                                                          |
+| `npm ls --workspaces --depth=0`                                           | Passed: three workspaces                                                                              |
+| `openspec validate initialize-store-foundation --strict` (before archive) | Passed                                                                                                |
+| Windows terminal Ctrl+C                                                   | API shutdown completed with code 0                                                                    |
 
 The browser root command was deliberately made to fail under Node 24/npm 12,
 returned exit 1 from the intended assertion, then passed after removing that

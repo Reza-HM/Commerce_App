@@ -12,7 +12,7 @@
   },
   "packageManager": "npm@12.2.0",
   "scripts": {
-    "lint": "eslint .",
+    "lint": "npm run format:check && eslint .",
     "typecheck": "node scripts/workspace.mjs typecheck",
     "test": "node scripts/workspace.mjs test",
     "build": "node scripts/workspace.mjs build",
@@ -29,7 +29,9 @@
     "pr:open": "node scripts/github-delivery.cjs open",
     "pr:merge": "node scripts/github-delivery.cjs merge",
     "docs:api:lint": "redocly lint commerce",
-    "docs:api:build": "redocly build-docs commerce --inlineBundle --output .local/api-reference.html"
+    "docs:api:build": "redocly build-docs commerce --inlineBundle --output .local/api-reference.html",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devEngines": {
     "runtime": {
@@ -53,6 +55,7 @@
     "ajv-formats": "3.0.1",
     "eslint": "10.13.0",
     "jest": "30.5.2",
+    "prettier": "3.9.10",
     "ts-jest": "29.4.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.0"

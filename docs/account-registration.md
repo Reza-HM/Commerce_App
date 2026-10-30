@@ -132,7 +132,7 @@ synthetic observation does not establish throughput, production latency, or scal
 New and existing canonical addresses both receive HTTP 202 and exactly:
 
 ```json
-{"status":"accepted","message":"Registration request processed."}
+{ "status": "accepted", "message": "Registration request processed." }
 ```
 
 This confirms processing, not creation or email delivery. Both valid paths perform
@@ -140,13 +140,13 @@ a fresh hash before database uniqueness resolution. No duplicate-email precheck,
 account ID/email/existence flag, Location, session, token, or cookie is returned.
 Hash work is equalized; SQL/network timing is not promised to be constant.
 
-| Outcome | Response |
-| --- | --- |
-| Validation/policy | 400: `error=invalid_registration`, fixed `message=Invalid registration request`, safe `field`, `code`, server `requestId` |
-| Peer budget/map capacity | Generic 429 with positive integer Retry-After |
-| Operation saturation/shutdown/recognized database outage, timeout or missing account schema | Generic 503 with Retry-After 1 |
-| Unexpected failure | Generic 500 `internal_error` |
-| Malformed JSON / oversized JSON / unsupported media | Existing generic 400 / 413 / 415 |
+| Outcome                                                                                     | Response                                                                                                                  |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Validation/policy                                                                           | 400: `error=invalid_registration`, fixed `message=Invalid registration request`, safe `field`, `code`, server `requestId` |
+| Peer budget/map capacity                                                                    | Generic 429 with positive integer Retry-After                                                                             |
+| Operation saturation/shutdown/recognized database outage, timeout or missing account schema | Generic 503 with Retry-After 1                                                                                            |
+| Unexpected failure                                                                          | Generic 500 `internal_error`                                                                                              |
+| Malformed JSON / oversized JSON / unsupported media                                         | Existing generic 400 / 413 / 415                                                                                          |
 
 Fields are only body/email/password. Codes: required, invalid_type, invalid_body,
 unexpected_field, invalid_email, password_encoding, password_too_large,
@@ -203,16 +203,16 @@ above; later integration results truthfully use `freshInstall=false`.
 Windows, Node 24.20.0, npm 12.2.0, PostgreSQL 18.6. The final API checks include
 case/trailing-slash route aliases retaining no-store and static redacted logs.
 
-| Gate | Result |
-| --- | --- |
-| `npm run lint` | Passed |
-| `npm run typecheck` | Passed |
-| `npm test` | Passed: 20 suites, 251 tests |
-| `npm run build` | Passed: database, API, web; final API rebuilt through smoke/integration |
-| `npm run test:e2e` | Passed: production Chromium desktop/mobile, headers and secret scans |
-| `npm run test:smoke` | Passed: five process checks, including blocked registration shutdown and missing/corrupt compiled policy |
-| `npm run test:integration` | Passed: one real application migration, unchanged replay, account commit/duplicate/race/rollback/constraints, real HTTP hashing, startup without migrations, original and account/HTTP sentinel preservation |
-| Strict OpenSpec current specs and active change | Passed: five items |
+| Gate                                            | Result                                                                                                                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run lint`                                  | Passed                                                                                                                                                                                                       |
+| `npm run typecheck`                             | Passed                                                                                                                                                                                                       |
+| `npm test`                                      | Passed: 20 suites, 251 tests                                                                                                                                                                                 |
+| `npm run build`                                 | Passed: database, API, web; final API rebuilt through smoke/integration                                                                                                                                      |
+| `npm run test:e2e`                              | Passed: production Chromium desktop/mobile, headers and secret scans                                                                                                                                         |
+| `npm run test:smoke`                            | Passed: five process checks, including blocked registration shutdown and missing/corrupt compiled policy                                                                                                     |
+| `npm run test:integration`                      | Passed: one real application migration, unchanged replay, account commit/duplicate/race/rollback/constraints, real HTTP hashing, startup without migrations, original and account/HTTP sentinel preservation |
+| Strict OpenSpec current specs and active change | Passed: five items                                                                                                                                                                                           |
 
 The initial application install's `freshInstall=true` evidence is recorded above;
 final repeat runs report false and preserve that history. Technical failed-migration

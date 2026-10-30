@@ -1,0 +1,23 @@
+# Generated output and private/local files
+node_modules/
+**/node_modules/
+**/dist/
+**/.next/
+**/out/
+coverage/
+test-results/
+playwright-report/
+.local/
+.env
+.env.*
+package-lock.json
+apps/web/next-env.d.ts
+# Immutable or generated history; hashes depend on exact SQL/corpus bytes
+packages/database/migrations/
+apps/api/src/accounts/assets/
+# Historical and generated workflow records
+docs/handoff-account-registration.md
+openspec/changes/archive/
+.agents/
+# CI edits require separate concrete approval
+.github/workflows/

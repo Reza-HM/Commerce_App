@@ -1,18 +1,22 @@
 export {
   ConfigurationError,
   readDatabaseConfiguration,
-  readRuntimeEnvironment
+  readRuntimeEnvironment,
 } from './configuration';
 export type {
   DatabaseConfiguration,
   DatabasePrefix,
   Environment,
-  RuntimeEnvironment
+  RuntimeEnvironment,
 } from './configuration';
-export {Database, poolOptions} from './database';
-export type {DatabaseEvent} from './database';
-export {guardedTestConfiguration} from './testing';
-export {AccountRepository} from './accounts';
-export type {NewAccount, AccountCreation, AccountRegistrationRepository} from './accounts';
-export {PostgresSessionRepository} from './sessions';
-export type {AccountCredential, SessionRepository} from './sessions';
+export { Database, poolOptions } from './database';
+export type { DatabaseEvent } from './database';
+export { guardedTestConfiguration } from './testing';
+export { AccountRepository } from './accounts';
+export type {
+  NewAccount,
+  AccountCreation,
+  AccountRegistrationRepository,
+} from './accounts';
+export { PostgresSessionRepository } from './sessions';
+export type { AccountCredential, SessionRepository } from './sessions';

@@ -337,3 +337,12 @@ is needed by the verified commands. A scoped esbuild override under
 `@esbuild-kit/core-utils` addresses its transitive development-server advisory;
 verify migration generation after dependency changes. Browser/migration tooling
 is development-only. No CI/CD or deploy changes are included.
+
+## Generated Next.js declarations
+
+`apps/web/next-env.d.ts` is generated, ignored, and not tracked. Next.js updates
+its route-type imports between development and production output directories.
+Do not commit those changes or copy declarations from another checkout. Keep the
+file in the web tsconfig include list. `npm run typecheck` already runs
+`next typegen` first; web dev/build also regenerate it, including after cloning.
+This follows the [Next.js TypeScript guidance](https://nextjs.org/docs/app/api-reference/config/typescript).

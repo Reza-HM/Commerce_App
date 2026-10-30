@@ -48,13 +48,19 @@ The workspace SHALL provide separate development and production startup commands
 
 ### Requirement: English localized web shell
 
-The web application SHALL serve a minimal responsive foundation page with English as its default locale, a correct document language, a page title, and a main landmark. Its visible interface text MUST come from a locale message resource. No marketplace workflows, role panels, or installation/offline claims SHALL be exposed.
+The web application SHALL serve a responsive foundation page with English as its default locale, a correct document language, a page title, and a main landmark. Its visible interface text MUST come from a locale message resource. The home page SHALL link to account registration and sign-in while remaining independent of API/database availability. Marketplace workflows, role panels, and installation/offline claims MUST NOT be exposed.
 
 #### Scenario: Default page renders
 
 - **WHEN** a visitor opens the root page in a production build at desktop and mobile viewport sizes
 - **THEN** the English foundation page renders without horizontal overflow or browser errors
 - **AND** its document language, title, and main landmark are present
+
+#### Scenario: Account navigation does not require dependencies
+
+- **WHEN** a visitor opens the home page while the API and database are unavailable
+- **THEN** localized registration and sign-in links remain available
+- **AND** following either link renders its form without a successful dependency check
 
 ### Requirement: Executable quality gates
 
@@ -109,3 +115,18 @@ Completion evidence SHALL identify commands, exit results, date, runtime/platfor
 - **WHEN** the required live environment cannot be supplied
 - **THEN** available offline checks can be reported individually without marking live verification or the implementation complete
 - **AND** no credentials are invented and no production/shared target is substituted
+
+### Requirement: Reproducible source formatting
+
+The repository SHALL provide a pinned formatter, committed style configuration, and write/check commands for maintained frontend and backend sources. Formatting MUST preserve migration SQL, generated migration metadata, checksum-sensitive assets, dependency lockfiles, generated outputs, and historical workflow records.
+
+#### Scenario: Contributor formats source
+
+- **WHEN** the documented formatter runs
+- **THEN** supported maintained source files use the same readable style and LF line endings
+- **AND** protected history and checksum-sensitive files retain their bytes
+
+#### Scenario: Formatting is checked
+
+- **WHEN** source formatting differs from the committed configuration
+- **THEN** the check command fails without writing files

@@ -12,3 +12,6 @@ playwright-report/
 .local/
 .DS_Store
 Thumbs.db
+
+# Next.js regenerates this for dev/build/typegen; keep it local.
+/apps/web/next-env.d.ts

@@ -10,6 +10,10 @@
 - Prefer complete, statically detectable utility classes over dynamically
   constructed class names. Preserve responsive behavior and accessibility.
 
+- Keep `apps/web/next-env.d.ts` generated and ignored. Do not commit its dev/build
+  path changes. Root `npm run typecheck` runs `next typegen` before TypeScript;
+  `next dev` and `next build` also regenerate it. Keep its tsconfig include.
+
 ## Product quality and design direction
 
 - The owner requires a premium, contemporary interface with distinctive visual

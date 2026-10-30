@@ -1,9 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: Arial, Helvetica, sans-serif;
-  --color-canvas: #f3f1eb;
-  --color-ink: #172e29;
-  --color-muted: #485e56;
-  --color-outline: #afbeb2;
+  --font-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+  --color-canvas: #f8f9fc;
+  --color-ink: #192238;
+  --color-muted: #5c6679;
+  --color-outline: #d9deea;
+  --color-accent: #3855e8;
+  --color-accent-soft: #eef0ff;
+  --color-night: #151e33;
+  --animate-enter: enter 650ms ease-out both;
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  ::selection { @apply bg-accent text-white; }
+  button:not(:disabled), a { @apply cursor-pointer; }
+  button:disabled { @apply cursor-not-allowed; }
+  input { @apply cursor-text; }
 }

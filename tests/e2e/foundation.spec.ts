@@ -7,10 +7,10 @@ test('production English shell works independently at desktop and mobile sizes',
   for(const viewport of [{width:1280,height:800},{width:375,height:812}]) {
     await page.setViewportSize(viewport);
     const response=await page.goto('/');expect(response?.status()).toBe(200);
-    await expect(page).toHaveTitle('Commerce foundation');
+    await expect(page).toHaveTitle('Commerce | A considered beginning');
     await expect(page.locator('html')).toHaveAttribute('lang','en');
     await expect(page.getByRole('main')).toBeVisible();
-    await expect(page.getByRole('heading',{level:1})).toContainText('A foundation');
+    await expect(page.getByRole('heading',{level:1})).toContainText('One account.');
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     expect(response?.headers()['x-content-type-options']).toBe('nosniff');
     expect(response?.headers()['x-frame-options']).toBe('DENY');

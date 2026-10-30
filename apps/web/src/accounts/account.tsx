@@ -2,6 +2,7 @@
 
 import {useRouter} from 'next/navigation';
 import {useEffect, useRef, useState, useSyncExternalStore} from 'react';
+import {Icon} from '../components/identity';
 import {accountApi} from './api';
 import {AccountSession} from './session';
 import type {AccountMessages} from './messages';
@@ -21,11 +22,11 @@ export function Account({messages: m}: {messages: AccountMessages}) {
     return () => {session.stop();document.removeEventListener('visibilitychange',visible);window.removeEventListener('pageshow',restored);window.removeEventListener('pagehide',hidden);};
   },[session]);
   useEffect(() => {if (state === 'unavailable' || state === 'unconfirmed') feedback.current?.focus();},[state]);
-  const button='mt-6 rounded-xl bg-ink px-5 py-3 font-bold text-canvas outline-offset-4 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-ink';
-  return <div className="rounded-2xl border border-outline bg-white/50 p-6 sm:p-8">
+  const button='mt-6 inline-flex min-h-12 items-center justify-center rounded-xl border border-outline bg-white px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4';
+  return <div className="rounded-2xl border border-outline bg-canvas/70 p-6 sm:p-8">
     {state === 'checking' && <p role="status" className="text-muted">{m.checking}</p>}
     {state === 'signingOut' && <p role="status" className="text-muted">{m.signingOut}</p>}
-    {state === 'signedIn' && <><p role="status" className="text-2xl font-medium">{m.signedIn}</p><p className="mt-3 leading-7 text-muted">{m.signedInHelp}</p><button type="button" className={button} onClick={() => void session.signOut()}>{m.signOut}</button></>}
+    {state === 'signedIn' && <><div className="mb-6 flex items-center justify-between"><span className="grid size-12 place-items-center rounded-xl bg-accent-soft text-accent"><Icon name="check"/></span><span className="text-[10px] font-semibold tracking-[.16em] text-muted">{m.accountDetail}</span></div><p role="status" className="text-2xl font-medium">{m.signedIn}</p><p className="mt-3 text-sm leading-7 text-muted">{m.signedInHelp}</p><div className="mt-6 flex items-start gap-3 border-t border-outline pt-5"><Icon name="lock" className="mt-1 size-4 shrink-0 text-accent"/><div><p className="text-sm font-semibold">{m.accountSession}</p><p className="mt-1 text-xs leading-6 text-muted">{m.accountPrivacy}</p></div></div><button type="button" className={button} onClick={() => void session.signOut()}>{m.signOut}</button></>}
     {(state === 'unavailable' || state === 'unconfirmed') && <div ref={feedback} tabIndex={-1} className="rounded outline-offset-4 focus-visible:outline-2">
       <p role="alert" className="leading-7">{state === 'unconfirmed' ? m.signOutUnconfirmed : m.checkUnavailable}</p>
       <button type="button" className={button} onClick={() => {if (state === 'unconfirmed') void session.signOut();else void session.inspect();}}>{state === 'unconfirmed' ? m.retrySignOut : m.retry}</button>

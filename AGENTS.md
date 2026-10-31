@@ -1,5 +1,32 @@
 # Project conventions
 
+## Efficient execution
+
+- Scale the workflow to the request. Small fixes and documentation changes do
+  not need a new OpenSpec proposal unless they change specified behavior. Use
+  the applicable skill when needed; do not reopen archived planning by default.
+- Reuse established decisions and the latest handoff. Check Git state on resume,
+  then read only relevant files/specifications and expand when evidence requires
+  it. Avoid rereading historical logs or printing whole files and test output.
+- Batch independent reads and missing product decisions. Ask only for information
+  or authorization that is actually missing; carry standing approvals forward.
+- During implementation, run focused checks for the affected behavior. Before a
+  code commit, run the required lint, typecheck, and tests once for that candidate.
+  Repeat checks only when subsequent changes or failures invalidate their evidence.
+- For prose-only documentation/instruction edits, local validation is formatting
+  and diff review; application builds, typechecks, browser, database, and unit
+  suites are unnecessary. API contracts, executable examples, and specification
+  changes still require their relevant checks. This local-validation rule takes
+  precedence over blanket pre-commit test requirements; required hosted CI stays.
+- Keep implementation, documentation, spec sync, and archive in the same feature
+  PR when completion and authorization permit. Avoid extra bookkeeping PRs or
+  commits just to record another successful run; never edit archived records.
+- Use the delivery helper's existing wait instead of repeatedly querying the
+  same CI state. After an interruption or uncertain mutation, reconcile once
+  read-only before continuing. Preserve all protection and merge checks.
+- Keep updates brief and meaningful, and report the result, validation, and any
+  blocker concisely. Do not narrate routine tool operations or unchanged polling.
+
 ## Frontend styling
 
 - Use Tailwind CSS utilities as the primary styling approach for all frontend UI.

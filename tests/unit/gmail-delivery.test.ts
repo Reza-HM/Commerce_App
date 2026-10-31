@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 import { connect, type ConnectionOptions } from 'node:tls';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   readMailConfiguration,
   SmtpVerificationSender,
@@ -46,6 +49,40 @@ test('real recovery acceptance refuses noninteractive setup before any mail or d
 beforeAll(() => {
   certificate = tlsCertificate();
 }, 20000);
+
+test('recovery setup explains App Password configuration failure without exposing input', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'commerce-recovery-prompt-'));
+  const preload = join(dir, 'synthetic-prompt.cjs');
+  try {
+    writeFileSync(
+      preload,
+      `require.cache[require.resolve(${JSON.stringify(resolve('scripts/gmail-prompt.cjs'))})] = { exports: {
+        gmailEnvironment: async () => ({ MAIL_PROVIDER: 'gmail', GMAIL_SMTP_USER: 'synthetic.sender@gmail.com', GMAIL_SMTP_APP_PASSWORD: 'PRIVATE_REFUSAL_MARKER' })
+      } };
+      const Module = require('node:module');
+      const load = Module._load;
+      Module._load = function(request, ...args) {
+        if (request === '../apps/api/dist/accounts/mail') return {
+          readMailConfiguration() { throw Object.assign(new Error('PRIVATE_REFUSAL_MARKER'), {setting:'GMAIL_SMTP_APP_PASSWORD'}); }
+        };
+        return load.call(this, request, ...args);
+      };`,
+    );
+    const result = spawnSync(
+      process.execPath,
+      ['--require', preload, 'scripts/accept-gmail-recovery.cjs'],
+      { encoding: 'utf8', timeout: 15000 },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('failed at Gmail configuration validation');
+    expect(result.stderr).toContain('16-letter Google App Password');
+    expect(result.stdout + result.stderr).not.toContain('PRIVATE_REFUSAL_MARKER');
+    expect(result.stdout + result.stderr).not.toContain('synthetic.sender@gmail.com');
+  } finally {
+    unlinkSync(preload);
+    rmdirSync(dir);
+  }
+});
 afterAll(() => certificate.cleanup());
 
 test('Gmail is default, requires private credentials and rejects unsafe origin/provider inputs', () => {

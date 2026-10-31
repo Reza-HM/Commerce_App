@@ -14,17 +14,6 @@ const {
   PostgresRecoveryRepository,
   PostgresSessionRepository,
 } = require('@commerce/database');
-const {
-  readMailConfiguration,
-  SmtpAccountSender,
-} = require('../apps/api/dist/accounts/mail');
-const { RegistrationService } = require('../apps/api/dist/accounts/service');
-const { RecoveryService } = require('../apps/api/dist/accounts/recovery');
-const { SessionService } = require('../apps/api/dist/accounts/sessions');
-const { hashPassword } = require('../apps/api/dist/accounts/password-hasher');
-const { validVerificationToken } = require('../apps/api/dist/accounts/verification');
-const { createRuntime } = require('../apps/api/dist/runtime');
-const { readApiConfiguration } = require('../apps/api/dist/configuration');
 
 let phase = 'private setup';
 (async () => {
@@ -44,7 +33,22 @@ let phase = 'private setup';
   const recipient = environment.GMAIL_SMTP_USER;
   const origin = 'http://127.0.0.1:4310';
   environment.VERIFICATION_WEB_ORIGIN = origin;
-  const mail = readMailConfiguration(environment, [origin]);
+  phase = 'Gmail configuration validation';
+  let mail;
+  try {
+    const { readMailConfiguration } = require('../apps/api/dist/accounts/mail');
+    mail = readMailConfiguration(environment, [origin]);
+  } catch (error) {
+    const hints = {
+      GMAIL_SMTP_USER: 'Enter the Gmail sender address used for the App Password.',
+      GMAIL_SMTP_APP_PASSWORD:
+        'Use the 16-letter Google App Password; spaces between groups are accepted. Input stays hidden and Enter submits it.',
+    };
+    if (Object.hasOwn(hints, error?.setting))
+      process.stderr.write(hints[error.setting] + '\n');
+    throw error;
+  }
+  phase = 'real-send confirmation';
   process.stdout.write(
     'This sends one real recovery link and one reset notification to the Gmail sender Inbox. It uses only exact-owned guarded test fixtures, free web port 4310, and a build matching the selected API port.\n',
   );
@@ -53,6 +57,15 @@ let phase = 'private setup';
     'yes'
   )
     throw new Error('Cancelled');
+  phase = 'guarded test configuration';
+  const { SmtpAccountSender } = require('../apps/api/dist/accounts/mail');
+  const { RegistrationService } = require('../apps/api/dist/accounts/service');
+  const { RecoveryService } = require('../apps/api/dist/accounts/recovery');
+  const { SessionService } = require('../apps/api/dist/accounts/sessions');
+  const { hashPassword } = require('../apps/api/dist/accounts/password-hasher');
+  const { validVerificationToken } = require('../apps/api/dist/accounts/verification');
+  const { createRuntime } = require('../apps/api/dist/runtime');
+  const { readApiConfiguration } = require('../apps/api/dist/configuration');
   const env = commandEnvironment('test:integration', environment);
   const database = createGuardedDatabase(env),
     accounts = new OwnedAccounts(database);

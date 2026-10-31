@@ -22,3 +22,5 @@ export { PostgresSessionRepository } from './sessions';
 export type { AccountCredential, SessionRepository } from './sessions';
 export { PostgresVerificationRepository } from './email-verifications';
 export type { VerificationProof, VerificationRepository } from './email-verifications';
+export { PostgresRecoveryRepository } from './password-recoveries';
+export type { RecoveryProof, RecoveryRepository } from './password-recoveries';

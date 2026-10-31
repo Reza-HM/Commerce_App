@@ -148,9 +148,11 @@ test('repository keeps locking, cooldown, expiry, credential proof and mutation 
   query.mockClear();
   query
     .mockResolvedValueOnce({ rows: [{ id: 'account' }] })
+    .mockResolvedValueOnce({ rows: [{ account_id: 'account' }] })
     .mockResolvedValueOnce({ rows: [{ id: 'token' }] });
   expect(await repository.confirm('digest', proof)).toBe(true);
-  expect(query.mock.calls[0]![0]).toContain('FOR UPDATE OF a, p');
+  expect(query.mock.calls[0]![0]).toContain('FOR UPDATE');
+  expect(query.mock.calls[1]![1]).toEqual(['account', proof.passwordHash]);
   expect(query.mock.calls.map((call) => call[0]).join(' ')).toContain(
     'COALESCE(revoked_at',
   );

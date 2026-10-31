@@ -45,13 +45,13 @@ function fields(body: unknown, names: string[]): Record<string, string> {
 export class VerificationService {
   private readonly requests = new RegistrationAdmission();
   private readonly confirmations = new RegistrationAdmission();
-  private readonly delivery = new RegistrationAdmission();
   constructor(
     private readonly repository: VerificationRepository,
     private readonly registration: RegistrationService,
     private readonly sender: VerificationSender,
     private readonly event: (name: string) => void = () => {},
     private readonly verify: typeof verifyPassword = verifyPassword,
+    private readonly delivery = new RegistrationAdmission(),
   ) {}
 
   private async db<T>(work: () => Promise<T>): Promise<T> {

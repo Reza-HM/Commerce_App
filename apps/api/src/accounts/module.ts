@@ -15,10 +15,39 @@ import type { RegistrationService } from './service';
 import { sessionToken } from './sessions';
 import type { SessionService } from './sessions';
 import type { VerificationService } from './verification';
+import type { RecoveryService } from './recovery';
 
 const REGISTRATION = Symbol('registration');
 const SESSIONS = Symbol('sessions');
 const VERIFICATION = Symbol('verification');
+const RECOVERY = Symbol('recovery');
+
+@Controller('accounts/password-recovery')
+class RecoveryController {
+  constructor(@Inject(RECOVERY) private readonly recovery: RecoveryService) {}
+  @Post('request')
+  async request(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.recovery.request(body, request.socket.remoteAddress ?? '[unknown]');
+    if (!response.destroyed && !response.writableEnded)
+      response
+        .status(202)
+        .json({ status: 'accepted', message: 'Password recovery request processed.' });
+  }
+  @Post('confirm')
+  async confirm(
+    @Body() body: unknown,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    await this.recovery.confirm(body, request.socket.remoteAddress ?? '[unknown]');
+    if (!response.destroyed && !response.writableEnded)
+      response.status(200).json({ status: 'password_reset' });
+  }
+}
 
 @Controller('accounts/email-verification')
 class VerificationController {
@@ -115,6 +144,7 @@ export class AccountsModule {
     service: RegistrationService,
     sessions?: SessionService,
     verification?: VerificationService,
+    recovery?: RecoveryService,
   ): DynamicModule {
     return {
       module: AccountsModule,
@@ -122,11 +152,13 @@ export class AccountsModule {
         AccountsController,
         ...(sessions ? [SessionsController] : []),
         ...(verification ? [VerificationController] : []),
+        ...(recovery ? [RecoveryController] : []),
       ],
       providers: [
         { provide: REGISTRATION, useValue: service },
         ...(sessions ? [{ provide: SESSIONS, useValue: sessions }] : []),
         ...(verification ? [{ provide: VERIFICATION, useValue: verification }] : []),
+        ...(recovery ? [{ provide: RECOVERY, useValue: recovery }] : []),
       ],
     };
   }

@@ -33,7 +33,8 @@
     "docs:api:lint": "redocly lint commerce",
     "docs:api:build": "redocly build-docs commerce --inlineBundle --output .local/api-reference.html",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "mail:gmail:accept:recovery": "node scripts/accept-gmail-recovery.cjs"
   },
   "devEngines": {
     "runtime": {

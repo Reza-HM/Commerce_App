@@ -18,6 +18,10 @@ const config: NextConfig = {
         source: '/verify-email/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
+      {
+        source: '/reset-password/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
     ];
   },
 };

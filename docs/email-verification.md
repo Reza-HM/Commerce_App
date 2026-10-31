@@ -10,9 +10,11 @@ The message opens `/verify-email#token=...`. The browser removes the fragment be
 interaction, keeps the token in transient memory, and asks for the registered password.
 Only explicit confirmation changes account state. Opening, previewing or prefetching
 the link cannot verify the account. Confirmation never changes the password or signs
-the user in; use the separate sign-in action after success. If someone registered an
-address with a password its owner does not know, this milestone cannot recover it.
-Password recovery remains a separate prerequisite before public launch.
+the user in; use the separate sign-in action after success. If the password is unknown,
+use the separate [password-recovery journey](password-recovery.md). Recovery preserves
+verification status, invalidates old verification links, and requires a fresh verification
+request followed by confirmation with the replacement password for unverified accounts.
+Public deployment and shared abuse protection remain separate prerequisites.
 
 ## Real Gmail delivery
 
@@ -181,8 +183,8 @@ separate operator review. Automated validation never migrates development data.
 
 ## Browser privacy and validation
 
-Only the verification token has the approved link-fragment exception to the no-URL
-credential rule. The confirmation route uses `no-referrer`, fixed destinations and no
+Verification and recovery tokens have the narrow incoming-link-fragment exception to the
+no-URL credential rule. The confirmation route uses `no-referrer`, fixed destinations and no
 third-party resources. Token/password state clears on route exit or history restore;
 password clears after every settled attempt. Reloading after fragment removal requires
 reopening the email. A lost confirmation response can follow a commit: the interface

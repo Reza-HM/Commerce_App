@@ -3,7 +3,7 @@
   "info": {
     "title": "Commerce_App HTTP API",
     "version": "0.1.0",
-    "description": "Current local NestJS services: health, registration, verified-only account sessions and password-bound email verification through authenticated Gmail SMTP (or explicitly selected local capture). Password recovery and public deployment remain deferred. Browser account pages use these APIs directly. Application responses retain server correlation and nosniff; account/verification/error responses are no-store. JSON defaults to 1 MiB; compressed bodies are unsupported. Lower-level parser failures can be non-JSON. See docs/api/README.md and linked service guides for limits and operational behavior."
+    "description": "Current local NestJS services: health, registration, verified-only account sessions and password-bound email verification through authenticated Gmail SMTP (or explicitly selected local capture). Password recovery supports both verified and unverified accounts without automatic verification or sign-in. Public deployment remains deferred. Browser account pages use these APIs directly. Application responses retain server correlation and nosniff; account/verification/error responses are no-store. JSON defaults to 1 MiB; compressed bodies are unsupported. Lower-level parser failures can be non-JSON. See docs/api/README.md and linked service guides for limits and operational behavior."
   },
   "servers": [
     {
@@ -19,7 +19,7 @@
     },
     {
       "name": "Accounts",
-      "description": "Ordinary registration, verified-only sessions and local email verification."
+      "description": "Ordinary registration, verified-only sessions, email verification and password recovery."
     }
   ],
   "paths": {
@@ -250,7 +250,7 @@
         "tags": ["Accounts"],
         "operationId": "createAccountSession",
         "summary": "Sign in",
-        "description": "Only verified accounts may sign in. Correct credentials for an unverified account return verification_required 403 without a cookie or automatic email. Unknown accounts and wrong passwords share generic 401. Five parsed attempts per direct peer per 60 seconds with 1024 buckets; registration, sign-in and confirmation share two password-work slots. Custom header and trusted exact Origin are required as documented.",
+        "description": "Only verified accounts may sign in. Correct credentials for an unverified account return verification_required 403 without a cookie or automatic email. Unknown accounts and wrong passwords share generic 401. Five parsed attempts per direct peer per 60 seconds with 1024 buckets; registration, sign-in and confirmation share two password-work slots. Custom header and trusted exact Origin are required as documented. Session insertion serializes with password reset and revalidates the checked credential; a stale password proof receives generic 401 with no cookie.",
         "parameters": [
           {
             "name": "X-Commerce-Request",
@@ -761,7 +761,7 @@
         "tags": ["Accounts"],
         "operationId": "requestEmailVerification",
         "summary": "Request a verification email",
-        "description": "Anonymous, non-credentialed JSON request. Unknown, verified and suppressed addresses share 202; no account is created and no delivery is promised. Eligible unverified accounts get a best-effort attempt through the configured mail provider. One issuance per account per 60 seconds, three retained challenges, 30-minute expiry. Five parsed attempts per peer per 60 seconds, 1024 peer buckets; two issuance/delivery slots with no queue and five-second SMTP deadline. SMTP failures after persistence do not change 202; database failures during required work return 503, unexpected failures 500. No automatic retry, durable delivery, cookie or credential output. CORS permits Content-Type and X-Commerce-Request only for trusted origins, without credential grants. 429 Retry-After is a positive integer; saturation 503 has Retry-After 1. Operational guide: docs/email-verification.md.",
+        "description": "Anonymous, non-credentialed JSON request. Unknown, verified and suppressed addresses share 202; no account is created and no delivery is promised. Eligible unverified accounts get a best-effort attempt through the configured mail provider. One issuance per account per 60 seconds, three retained challenges, 30-minute expiry. Five parsed attempts per peer per 60 seconds, 1024 peer buckets; two issuance/delivery slots with no queue and five-second SMTP deadline. SMTP failures after persistence do not change 202; database failures during required work return 503, unexpected failures 500. No automatic retry, durable delivery, cookie or credential output. CORS permits Content-Type and X-Commerce-Request only for trusted origins, without credential grants. 429 Retry-After is a positive integer; saturation 503 has Retry-After 1. Operational guide: docs/email-verification.md. Mail capacity is shared with recovery/notification. A committed reset invalidates old verification links; explicitly request a fresh one.",
         "security": [],
         "parameters": [
           {
@@ -1001,6 +1001,417 @@
                     },
                     "message": {
                       "type": "string",
+                      "const": "Request rejected"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted Origin or missing custom header; rejected before account work.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["error", "message", "requestId"],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "const": "http_403"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Request rejected"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/accounts/password-recovery/request": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "requestPasswordRecovery",
+        "summary": "Request a password reset email",
+        "description": "Anonymous non-credentialed JSON request for verified or unverified existing accounts. Unknown, eligible and suppressed addresses receive the same 202 without delivery or account-existence claims. Canonical email policy matches registration. At most one recovery challenge per account per 60 seconds, three retained challenges, 30-minute expiry. Earlier live links remain valid after resend/failure. Five parsed attempts per direct peer per 60 seconds, 1024 buckets per process. Shares two issuance/mail slots across verification, recovery and reset notification, without queue or retry; five-second SMTP deadline. SMTP is not awaited; required storage outages return 503. Missing X-Commerce-Request: 1 or a present untrusted Origin returns 403 before work. No cookies or credentials returned. See docs/password-recovery.md.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Commerce-Request",
+            "in": "header",
+            "required": true,
+            "description": "Must equal 1. A present Origin must exactly match WEB_ORIGINS; trusted non-credentialed CORS permits this header.",
+            "schema": {
+              "type": "string",
+              "const": "1"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Registration canonicalization: trim outer ASCII space/tab, lowercase ASCII dot-atom email; at most 254 canonical bytes. Raw input at most 1024 bytes."
+                  }
+                }
+              },
+              "example": {
+                "email": "reader@example.test"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Request processed without revealing account existence, verification state or delivery.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["status", "message"],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "accepted"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Password recovery request processed."
+                    }
+                  }
+                },
+                "example": {
+                  "status": "accepted",
+                  "message": "Password recovery request processed."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed recovery input or parser-level JSON error.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["error", "message", "requestId"],
+                      "properties": {
+                        "error": {
+                          "const": "invalid_recovery"
+                        },
+                        "message": {
+                          "const": "Request rejected"
+                        },
+                        "requestId": {
+                          "$ref": "#/components/schemas/RequestId"
+                        }
+                      }
+                    },
+                    {
+                      "$ref": "#/components/responses/BadJson/content/application~1json/schema"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Untrusted Origin or missing custom header; rejected before account work.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["error", "message", "requestId"],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "const": "http_403"
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Request rejected"
+                    },
+                    "requestId": {
+                      "$ref": "#/components/schemas/RequestId"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/accounts/password-recovery/confirm": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "confirmPasswordRecovery",
+        "summary": "Replace a forgotten password using its recovery token",
+        "description": "Anonymous non-credentialed explicit reset. Exactly token and password; no old password/session needed. A live recovery token atomically replaces the password, revokes all sessions, and invalidates all recovery/verification links. Verification status is preserved; unverified accounts must request fresh verification and confirm with the replacement password. No cookie or automatic sign-in. Applies current new-password policy and fresh salted scrypt; bound email/local-part screening uses stored identity. Unknown/expired/used tokens or stale proof share 401. Policy failure leaves a live token usable. Shares two password-work slots with registration/sign-in/verification. Five attempts per direct peer per 60 seconds; 1024 buckets. A best-effort reset notification is attempted after commit without changing success on mail failure/saturation. Lost response may follow commit; never automatically retry. Tokens belong only in JSON, never an API URL or GET. See docs/password-recovery.md.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Commerce-Request",
+            "in": "header",
+            "required": true,
+            "description": "Must equal 1. A present Origin must exactly match WEB_ORIGINS; trusted non-credentialed CORS permits this header.",
+            "schema": {
+              "type": "string",
+              "const": "1"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["token", "password"],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "writeOnly": true,
+                    "description": "Canonical base64url encoding of the emailed 32-byte secret. Send only in JSON, never in an API URL."
+                  },
+                  "password": {
+                    "type": "string",
+                    "writeOnly": true,
+                    "description": "Well-formed Unicode, <=1024 raw UTF-8 bytes; NFC normalization then 15-128 Unicode code points. No trimming, truncation or composition rules; spaces and case are significant. Whole NFC/lowercase matches against the pinned local common-password corpus, submitted canonical email/local part, commerceapp12345, commerce_app12345 and commerce-app12345 are rejected. Screening folds case, hashing preserves it. Raw minLength/maxLength are deliberately omitted: pre-normalization schema lengths would misrepresent the normalized server policy. Contextual screening uses the account bound to the token, rather than a submitted email. No password-history check."
+                  }
+                }
+              },
+              "example": {
+                "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+                "password": "Synthetic docs passphrase 628!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset committed; explicitly sign in. Unverified accounts still require verification. No Set-Cookie.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["status"],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "const": "password_reset"
+                    }
+                  }
+                },
+                "example": {
+                  "status": "password_reset"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input, unsupported new password, or parser-level JSON error. Invalid shape/token uses the generic recovery error; policy errors identify only the password field and a fixed reason code.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["error", "message", "requestId"],
+                      "properties": {
+                        "error": {
+                          "const": "invalid_recovery"
+                        },
+                        "message": {
+                          "const": "Request rejected"
+                        },
+                        "requestId": {
+                          "$ref": "#/components/schemas/RequestId"
+                        }
+                      }
+                    },
+                    {
+                      "$ref": "#/components/responses/BadJson/content/application~1json/schema"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["error", "message", "requestId", "field", "code"],
+                      "properties": {
+                        "error": {
+                          "const": "invalid_recovery"
+                        },
+                        "message": {
+                          "const": "Invalid password"
+                        },
+                        "requestId": {
+                          "$ref": "#/components/schemas/RequestId"
+                        },
+                        "field": {
+                          "const": "password"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "password_encoding",
+                            "password_too_large",
+                            "password_length",
+                            "password_blocklisted"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Recovery token is unknown, expired, used, or no longer authorizes replacement.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              },
+              "X-Content-Type-Options": {
+                "$ref": "#/components/headers/NoSniff"
+              },
+              "Cache-Control": {
+                "$ref": "#/components/headers/NoStore"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["error", "message", "requestId"],
+                  "properties": {
+                    "error": {
+                      "const": "invalid_recovery"
+                    },
+                    "message": {
                       "const": "Request rejected"
                     },
                     "requestId": {

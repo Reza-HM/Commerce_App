@@ -59,11 +59,15 @@ export class PostgresVerificationRepository implements VerificationRepository {
       // Account-first ordering matches issuance. Lock the credential too, so an
       // update racing with the proof cannot commit between revalidation and use.
       const account = await client.query(
-        `SELECT a.id FROM accounts a JOIN account_passwords p ON p.account_id = a.id
-         WHERE a.id = $1 AND a.email_verified_at IS NULL AND p.password_hash = $2 FOR UPDATE OF a, p`,
-        [proof.accountId, proof.passwordHash],
+        'SELECT id FROM accounts WHERE id = $1 AND email_verified_at IS NULL FOR UPDATE',
+        [proof.accountId],
       );
       if (!account.rows[0]) return false;
+      const credential = await client.query(
+        'SELECT account_id FROM account_passwords WHERE account_id = $1 AND password_hash = $2 FOR UPDATE',
+        [proof.accountId, proof.passwordHash],
+      );
+      if (!credential.rows[0]) return false;
       const token = await client.query(
         'SELECT id FROM account_email_verifications WHERE account_id = $1 AND token_digest = $2 AND expires_at > clock_timestamp() FOR UPDATE',
         [proof.accountId, digest],

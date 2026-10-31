@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { connect, type ConnectionOptions } from 'node:tls';
 import { randomBytes } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import {
   readMailConfiguration,
   SmtpVerificationSender,
@@ -21,6 +22,27 @@ const configuration: GmailMailConfiguration = {
   webOrigin: origin,
 };
 let certificate: ReturnType<typeof tlsCertificate>;
+
+test('real recovery acceptance refuses noninteractive setup before any mail or database work', () => {
+  for (const extra of [
+    {},
+    { RECOVERY_ACCEPTANCE_API_PORT: '4310' },
+    { RECOVERY_ACCEPTANCE_WEB_DIR: 'apps' },
+  ]) {
+    const result = spawnSync(process.execPath, ['scripts/accept-gmail-recovery.cjs'], {
+      encoding: 'utf8',
+      timeout: 15000,
+      env: {
+        ...process.env,
+        ...extra,
+        GMAIL_SMTP_APP_PASSWORD: 'PRIVATE_REFUSAL_MARKER',
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('failed at private setup');
+    expect(result.stdout + result.stderr).not.toContain('PRIVATE_REFUSAL_MARKER');
+  }
+});
 beforeAll(() => {
   certificate = tlsCertificate();
 }, 20000);

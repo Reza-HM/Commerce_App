@@ -258,6 +258,9 @@ export function VerificationForm({
         aria-label={m.verificationNavigation}
         className="mt-6 flex flex-wrap justify-between gap-3 border-t border-outline pt-4 text-sm"
       >
+        <Link href="/forgot-password" className={linkClass}>
+          {m.forgotPasswordLink}
+        </Link>
         <Link href="/verify-email/request" className={linkClass}>
           {m.verificationRequestLink}
         </Link>

@@ -47,49 +47,16 @@ export function validateRegistration(
     throw new RegistrationValidationError('email', 'required');
   if (typeof input.email !== 'string')
     throw new RegistrationValidationError('email', 'invalid_type');
-  const rawEmail = input.email;
-  if (Buffer.byteLength(rawEmail, 'utf8') > 1024 || /[^\x20-\x7e\t]/.test(rawEmail)) {
-    throw new RegistrationValidationError('email', 'invalid_email');
-  }
-  const emailNormalized = rawEmail.replace(/^[ \t]+|[ \t]+$/g, '').toLowerCase();
-  const parts = emailNormalized.split('@');
-  const local = parts[0] ?? '';
-  const labels = (parts[1] ?? '').split('.');
-  if (
-    parts.length !== 2 ||
-    local.length > 64 ||
-    !localPart.test(local) ||
-    emailNormalized.length > 254 ||
-    labels.length < 2 ||
-    !labels.every((label) => domainLabel.test(label))
-  ) {
-    throw new RegistrationValidationError('email', 'invalid_email');
-  }
+  const emailNormalized = validateEmail(input.email);
   if (!Object.hasOwn(input, 'password'))
     throw new RegistrationValidationError('password', 'required');
   if (typeof input.password !== 'string')
     throw new RegistrationValidationError('password', 'invalid_type');
-  const rawPassword = input.password;
-  for (const scalar of rawPassword) {
-    const point = scalar.codePointAt(0)!;
-    if (point >= 0xd800 && point <= 0xdfff)
-      throw new RegistrationValidationError('password', 'password_encoding');
-  }
-  if (Buffer.byteLength(rawPassword, 'utf8') > 1024)
-    throw new RegistrationValidationError('password', 'password_too_large');
-  const passwordNormalized = rawPassword.normalize('NFC');
-  const length = Array.from(passwordNormalized).length;
-  if (length < 15 || length > 128)
-    throw new RegistrationValidationError('password', 'password_length');
-  const screened = passwordNormalized.toLowerCase();
-  if (
-    commonPasswords.has(screened) ||
-    servicePasswords.has(screened) ||
-    screened === emailNormalized ||
-    screened === local
-  ) {
-    throw new RegistrationValidationError('password', 'password_blocklisted');
-  }
+  const passwordNormalized = validateNewPassword(
+    input.password,
+    commonPasswords,
+    emailNormalized,
+  );
   return { emailNormalized, passwordNormalized };
 }
 
@@ -134,4 +101,55 @@ export function validateSignIn(body: unknown): {
     if (point >= 0xd800 && point <= 0xdfff) throw new Error('Invalid sign-in');
   }
   return { emailNormalized, passwordNormalized: input.password.normalize('NFC') };
+}
+
+export function validateEmail(email: string): string {
+  const rawEmail = email;
+  if (Buffer.byteLength(rawEmail, 'utf8') > 1024 || /[^\x20-\x7e\t]/.test(rawEmail)) {
+    throw new RegistrationValidationError('email', 'invalid_email');
+  }
+  const emailNormalized = rawEmail.replace(/^[ \t]+|[ \t]+$/g, '').toLowerCase();
+  const parts = emailNormalized.split('@');
+  const local = parts[0] ?? '';
+  const labels = (parts[1] ?? '').split('.');
+  if (
+    parts.length !== 2 ||
+    local.length > 64 ||
+    !localPart.test(local) ||
+    emailNormalized.length > 254 ||
+    labels.length < 2 ||
+    !labels.every((label) => domainLabel.test(label))
+  ) {
+    throw new RegistrationValidationError('email', 'invalid_email');
+  }
+  return emailNormalized;
+}
+
+export function validateNewPassword(
+  password: string,
+  commonPasswords: ReadonlySet<string>,
+  emailNormalized?: string,
+): string {
+  const rawPassword = password;
+  for (const scalar of rawPassword) {
+    const point = scalar.codePointAt(0)!;
+    if (point >= 0xd800 && point <= 0xdfff)
+      throw new RegistrationValidationError('password', 'password_encoding');
+  }
+  if (Buffer.byteLength(rawPassword, 'utf8') > 1024)
+    throw new RegistrationValidationError('password', 'password_too_large');
+  const passwordNormalized = rawPassword.normalize('NFC');
+  const length = Array.from(passwordNormalized).length;
+  if (length < 15 || length > 128)
+    throw new RegistrationValidationError('password', 'password_length');
+  const screened = passwordNormalized.toLowerCase();
+  if (
+    commonPasswords.has(screened) ||
+    servicePasswords.has(screened) ||
+    (emailNormalized !== undefined &&
+      (screened === emailNormalized || screened === emailNormalized.split('@')[0]))
+  ) {
+    throw new RegistrationValidationError('password', 'password_blocklisted');
+  }
+  return passwordNormalized;
 }

@@ -83,8 +83,10 @@ async function createSmtpCapture({
     },
   };
 }
-function capturedToken(message) {
+function capturedToken(message, path = '/verify-email') {
   const decoded = message.replace(/=\r\n/g, '').replace(/=3D/g, '=');
-  return /\/verify-email#token=([A-Za-z0-9_-]{43})/.exec(decoded)?.[1];
+  const prefix = path + '#token=';
+  const value = decoded.slice(decoded.indexOf(prefix) + prefix.length);
+  return decoded.includes(prefix) ? /^([A-Za-z0-9_-]{43})/.exec(value)?.[1] : undefined;
 }
 module.exports = { createSmtpCapture, capturedToken };

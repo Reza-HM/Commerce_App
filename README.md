@@ -15,6 +15,7 @@ See [account registration](docs/account-registration.md) for the API-only
 email/password contract, password policy, local resource limits, and live
 persistence evidence. The [browser account flow](docs/account-web-flow.md) includes
 [verified-only sessions](docs/account-sessions.md) and
-[email verification with Gmail delivery](docs/email-verification.md). Password recovery
-and public deployment remain deferred. Use `npm run dev:api:gmail` for masked sender
+[email verification with Gmail delivery](docs/email-verification.md) and
+[password recovery](docs/password-recovery.md). Public deployment remains deferred.
+Use `npm run dev:api:gmail` for masked sender
 setup; real inbox acceptance is required separately from automated capture tests.

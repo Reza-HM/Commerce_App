@@ -86,3 +86,28 @@ export const accountEmailVerifications = pgTable(
     index('account_email_verifications_account_idx').on(table.accountId),
   ],
 );
+
+export const accountPasswordRecoveries = pgTable(
+  'account_password_recoveries',
+  {
+    id: uuid('id').primaryKey(),
+    accountId: uuid('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'restrict' }),
+    tokenDigest: varchar('token_digest', { length: 64 }).notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('account_password_recoveries_digest_key').on(table.tokenDigest),
+    check(
+      'account_password_recoveries_digest_check',
+      sql`${table.tokenDigest} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check(
+      'account_password_recoveries_expiry_check',
+      sql`${table.expiresAt} = ${table.issuedAt} + interval '30 minutes'`,
+    ),
+    index('account_password_recoveries_account_idx').on(table.accountId),
+  ],
+);

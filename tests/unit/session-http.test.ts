@@ -22,6 +22,55 @@ const api = JSON.parse(readFileSync('docs/api/openapi.json', 'utf8')) as {
 };
 const validator = new Ajv2020({ strict: false });
 addFormats(validator);
+
+test('an old password proof rejected by session creation returns generic 401 without a cookie', async () => {
+  const registration = new RegistrationService({
+    create: async () => ({ kind: 'existing' }),
+  });
+  const sessions = new SessionService(
+    {
+      credential: async () => ({
+        accountId: randomUUID(),
+        passwordHash: 'old-hash',
+        emailVerified: true,
+      }),
+      create: async () => 'stale',
+      renew: async () => undefined,
+      revoke: async () => {},
+    },
+    registration,
+    async () => true,
+  );
+  const runtime = await createRuntime(
+    readApiConfiguration({
+      NODE_ENV: 'development',
+      DATABASE_URL: 'postgres://synthetic:synthetic@127.0.0.1/test',
+    }),
+    { ready: async () => true, close: async () => {} },
+    () => {},
+    registration,
+    sessions,
+  );
+  await runtime.listen(0);
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${(runtime.server.address() as { port: number }).port}/accounts/sessions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Commerce-Request': '1' },
+        body: JSON.stringify({ email: 'owner@example.test', password: 'synthetic' }),
+      },
+    );
+    expect(response.status).toBe(401);
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(await response.json()).toMatchObject({
+      error: 'invalid_credentials',
+      message: 'Request rejected',
+    });
+  } finally {
+    expect(await runtime.close()).toBe(0);
+  }
+});
 function matchesContract(path: string, method: string, status: number, body: unknown) {
   const schema =
     api.paths[path]![method]!.responses[String(status)]!.content!['application/json']!

@@ -4,7 +4,9 @@ export type Action =
   | 'current'
   | 'signOut'
   | 'requestVerification'
-  | 'confirmVerification';
+  | 'confirmVerification'
+  | 'requestRecovery'
+  | 'confirmRecovery';
 export type FailureCode =
   | 'configuration'
   | 'unavailable'
@@ -21,7 +23,10 @@ export type FailureCode =
   | 'passwordLength'
   | 'passwordWeak'
   | 'verificationRequired'
-  | 'verificationInvalid';
+  | 'verificationInvalid'
+  | 'recoveryInvalid'
+  | 'recoveryUncertain'
+  | 'passwordMismatch';
 export type Result =
   { ok: true } | { ok: false; code: FailureCode; field?: 'email' | 'password' };
 type Credentials =
@@ -60,6 +65,8 @@ const paths: Record<Action, string> = {
   signOut: '/accounts/sessions/current',
   requestVerification: '/accounts/email-verification/request',
   confirmVerification: '/accounts/email-verification/confirm',
+  requestRecovery: '/accounts/password-recovery/request',
+  confirmRecovery: '/accounts/password-recovery/confirm',
 };
 const policy: Record<string, FailureCode> = {
   required: 'required',
@@ -107,14 +114,17 @@ export function createAccountApi(
       try {
         const verification =
           action === 'requestVerification' || action === 'confirmVerification';
-        const hasBody = action === 'register' || action === 'signIn' || verification;
+        const recovery = action === 'requestRecovery' || action === 'confirmRecovery';
+        const hasBody =
+          action === 'register' || action === 'signIn' || verification || recovery;
         const response = await send(origin + paths[action], {
           method: hasBody ? 'POST' : action === 'signOut' ? 'DELETE' : 'GET',
           headers: {
             ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
             ...(action !== 'register' ? { 'X-Commerce-Request': '1' } : {}),
           },
-          credentials: action === 'register' || verification ? 'omit' : 'include',
+          credentials:
+            action === 'register' || verification || recovery ? 'omit' : 'include',
           cache: 'no-store',
           redirect: 'error',
           signal: controller.signal,
@@ -123,12 +133,27 @@ export function createAccountApi(
         if (action === 'signOut' && response.status === 204) return { ok: true };
         const body: unknown = await response.json();
         const expected =
-          action === 'register' || action === 'requestVerification'
+          action === 'register' ||
+          action === 'requestVerification' ||
+          action === 'requestRecovery'
             ? 202
             : action === 'signIn'
               ? 201
               : 200;
         if (response.status === expected && object(body)) {
+          if (
+            action === 'requestRecovery' &&
+            body.status === 'accepted' &&
+            body.message === 'Password recovery request processed.' &&
+            Object.keys(body).length === 2
+          )
+            return { ok: true };
+          if (
+            action === 'confirmRecovery' &&
+            body.status === 'password_reset' &&
+            Object.keys(body).length === 1
+          )
+            return { ok: true };
           if (
             action === 'requestVerification' &&
             body.status === 'accepted' &&
@@ -166,6 +191,8 @@ export function createAccountApi(
           )
             return { ok: true };
         }
+        if (response.status === 401 && action === 'confirmRecovery')
+          return { ok: false, code: 'recoveryInvalid' };
         if (response.status === 401 && action === 'confirmVerification')
           return { ok: false, code: 'verificationInvalid' };
         if (
@@ -183,12 +210,13 @@ export function createAccountApi(
         if (response.status === 403) return { ok: false, code: 'forbidden' };
         if (response.status === 429) return { ok: false, code: 'limited' };
         if (response.status === 400) {
-          if (action === 'requestVerification')
+          if (action === 'requestVerification' || action === 'requestRecovery')
             return { ok: false, code: 'email', field: 'email' };
           if (
-            action === 'register' &&
+            (action === 'register' || action === 'confirmRecovery') &&
             object(body) &&
-            body.error === 'invalid_registration' &&
+            body.error ===
+              (action === 'register' ? 'invalid_registration' : 'invalid_recovery') &&
             (body.field === 'email' || body.field === 'password') &&
             typeof body.code === 'string' &&
             Object.hasOwn(policy, body.code) &&

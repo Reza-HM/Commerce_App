@@ -269,6 +269,14 @@ export function AccountForm({
               />
             )}
           </button>
+          {mode === 'signIn' && (
+            <Link
+              href="/forgot-password"
+              className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4"
+            >
+              {m.forgotPasswordLink}
+            </Link>
+          )}
           <p role="status" className="min-h-5 text-center text-xs text-muted">
             {pending ? m.pending : ''}
           </p>

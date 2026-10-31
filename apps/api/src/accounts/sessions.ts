@@ -73,8 +73,14 @@ export class SessionService {
       if (!credential.emailVerified) throw new SessionError(403, true);
       const token = randomBytes(32).toString('base64url');
       const expires = await this.db(() =>
-        this.repository.create(randomUUID(), credential.accountId, digest(token)),
+        this.repository.create(
+          randomUUID(),
+          credential.accountId,
+          digest(token),
+          credential.passwordHash,
+        ),
       );
+      if (expires === 'stale') throw new SessionError(401);
       if (!expires) throw new SessionError(403, true);
       return { token, expires };
     } finally {

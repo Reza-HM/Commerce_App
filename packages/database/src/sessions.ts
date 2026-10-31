@@ -7,7 +7,12 @@ export interface AccountCredential {
 }
 export interface SessionRepository {
   credential(email: string): Promise<AccountCredential | undefined>;
-  create(id: string, accountId: string, digest: string): Promise<Date | undefined>;
+  create(
+    id: string,
+    accountId: string,
+    digest: string,
+    passwordHash: string,
+  ): Promise<Date | 'stale' | undefined>;
   renew(digest: string): Promise<string | undefined>;
   revoke(digest: string): Promise<void>;
 }
@@ -37,8 +42,24 @@ export class PostgresSessionRepository implements SessionRepository {
     });
   }
 
-  create(id: string, accountId: string, digest: string): Promise<Date | undefined> {
+  create(
+    id: string,
+    accountId: string,
+    digest: string,
+    passwordHash: string,
+  ): Promise<Date | 'stale' | undefined> {
     return this.database.transaction(async (client) => {
+      const account = await client.query<{ email_verified_at: Date | null }>(
+        'SELECT email_verified_at FROM accounts WHERE id = $1 FOR UPDATE',
+        [accountId],
+      );
+      if (!account.rows[0]) return 'stale';
+      const credential = await client.query(
+        'SELECT account_id FROM account_passwords WHERE account_id = $1 AND password_hash = $2 FOR UPDATE',
+        [accountId, passwordHash],
+      );
+      if (!credential.rows[0]) return 'stale';
+      if (account.rows[0].email_verified_at === null) return undefined;
       const result = await client.query<{ absolute_expires_at: Date }>(
         `INSERT INTO account_sessions (id, account_id, token_digest, issued_at, absolute_expires_at, last_activity_at)
         SELECT $1, $2, $3, now(), now() + interval '12 hours', now() FROM accounts

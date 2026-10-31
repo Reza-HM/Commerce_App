@@ -20,7 +20,10 @@ budget. Sign-in has a separate local peer budget; neither is a distributed limit
 
 The [verification flow](email-verification.md) permanently revokes pre-verification
 sessions and requires registered-password confirmation followed by explicit sign-in.
-Password recovery, secure deployment,
+Password recovery revokes every session and rechecks credential proof under the account
+lock before a concurrent sign-in can insert a session. Reset-first old proof returns 401;
+session-first rows are permanently revoked, including when cookie delivery is delayed.
+See [password recovery](password-recovery.md). Secure deployment,
 shared abuse protection and a bounded expired-session retention policy remain
 necessary before public deployment.
 

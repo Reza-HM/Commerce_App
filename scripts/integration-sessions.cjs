@@ -14,7 +14,19 @@ async function validateSessions(database, env) {
     const id = randomUUID();
     const digest = createHash('sha256').update(randomBytes(32)).digest('hex');
     owned.set(id, 'pending');
-    await repository.create(id, accountId, digest);
+    const credential = await database.transaction((client) =>
+      client.query('SELECT password_hash FROM account_passwords WHERE account_id = $1', [
+        accountId,
+      ]),
+    );
+    assert.ok(
+      (await repository.create(
+        id,
+        accountId,
+        digest,
+        credential.rows[0].password_hash,
+      )) instanceof Date,
+    );
     owned.set(id, 'confirmed');
     return { id, digest };
   };
@@ -107,10 +119,11 @@ async function validateSessions(database, env) {
     const { readApiConfiguration } = require('../apps/api/dist/configuration.js');
     const sessionPort = {
       credential: (email) => repository.credential(email),
-      create: async (id, accountId, digest) => {
+      create: async (id, accountId, digest, passwordHash) => {
         owned.set(id, 'pending');
-        const result = await repository.create(id, accountId, digest);
-        owned.set(id, 'confirmed');
+        const result = await repository.create(id, accountId, digest, passwordHash);
+        if (result instanceof Date) owned.set(id, 'confirmed');
+        else owned.delete(id);
         return result;
       },
       renew: (digest) => repository.renew(digest),

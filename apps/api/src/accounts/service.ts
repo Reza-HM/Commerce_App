@@ -3,7 +3,7 @@ import type { AccountRegistrationRepository } from '@commerce/database';
 import { RegistrationAdmission, RegistrationRejection } from './admission';
 import { hashPassword } from './password-hasher';
 import { loadCommonPasswords } from './password-policy';
-import { validateRegistration } from './validation';
+import { validateNewPassword, validateRegistration } from './validation';
 
 const temporaryCodes = new Set([
   'ECONNREFUSED',
@@ -110,5 +110,8 @@ export class RegistrationService {
   }
   acquirePasswordWork(): () => void {
     return this.admission.acquire();
+  }
+  screenNewPassword(password: string, email?: string): string {
+    return validateNewPassword(password, this.commonPasswords, email);
   }
 }

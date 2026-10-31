@@ -28,6 +28,7 @@ const {
 } = require('./integration-accounts.cjs');
 const { validateSessions } = require('./integration-sessions.cjs');
 const { validateVerification } = require('./integration-verification.cjs');
+const { validateRecovery } = require('./integration-recovery.cjs');
 
 class ExpectedWorkerFailure extends Error {}
 
@@ -256,6 +257,7 @@ async function main(env = process.env) {
       const accountHttp = await validateAccountHttp(database, env);
       const sessions = await validateSessions(database, env);
       const verification = await validateVerification(database);
+      const recovery = await validateRecovery(database);
       assert.deepEqual(
         await schemaSnapshot(database),
         applicationState,
@@ -274,6 +276,7 @@ async function main(env = process.env) {
         database: server.database,
         transport: 'local plaintext',
         application,
+        recovery,
         sentinel,
         technical,
         accounts,

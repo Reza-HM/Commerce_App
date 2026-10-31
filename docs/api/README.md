@@ -51,14 +51,18 @@ through the explicit
 
 ## Current endpoints
 
-| Method | Path                         | Authentication          | Normal result                                                           | Side effect                                                   |
-| ------ | ---------------------------- | ----------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
-| GET    | `/health/live`               | None                    | 200 `{"status":"ok"}`                                                   | None; no dependency check                                     |
-| GET    | `/health/ready`              | None                    | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}`                 | Bounded database probe                                        |
-| POST   | `/accounts/register`         | None                    | 202 `{"status":"accepted","message":"Registration request processed."}` | Atomically creates an unverified account/credential if absent |
-| POST   | `/accounts/sessions`         | Email and password      | 201                                                                     | Creates a session cookie                                      |
-| GET    | `/accounts/sessions/current` | Session cookie          | 200 or 401                                                              | Inspects and renews a session                                 |
-| DELETE | `/accounts/sessions/current` | Optional session cookie | 204                                                                     | Revokes the presented session                                 |
+| Method | Path                                   | Authentication                               | Normal result                                                           | Side effect                                                   |
+| ------ | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| GET    | `/health/live`                         | None                                         | 200 `{"status":"ok"}`                                                   | None; no dependency check                                     |
+| GET    | `/health/ready`                        | None                                         | 200 `{"status":"ok"}` or 503 `{"status":"unavailable"}`                 | Bounded database probe                                        |
+| POST   | `/accounts/register`                   | None                                         | 202 `{"status":"accepted","message":"Registration request processed."}` | Atomically creates an unverified account/credential if absent |
+| POST   | `/accounts/sessions`                   | Email and password                           | 201                                                                     | Creates a session cookie                                      |
+| GET    | `/accounts/sessions/current`           | Session cookie                               | 200 or 401                                                              | Inspects and renews a session                                 |
+| DELETE | `/accounts/sessions/current`           | Optional session cookie                      | 204                                                                     | Revokes the presented session                                 |
+| POST   | `/accounts/email-verification/request` | None; custom header                          | Generic 202                                                             | Bounded verification mail attempt                             |
+| POST   | `/accounts/email-verification/confirm` | Token and registered password; custom header | 200                                                                     | Verifies email and revokes old sessions                       |
+| POST   | `/accounts/password-recovery/request`  | None; custom header                          | Generic 202                                                             | Bounded recovery mail attempt                                 |
+| POST   | `/accounts/password-recovery/confirm`  | Recovery token; custom header                | 200                                                                     | Replaces password, revokes all sessions, invalidates links    |
 
 Canonical paths are shown. Express also accepts case/trailing-slash aliases and
 implicitly handles HEAD for GET routes. Global OPTIONS requests without a body
@@ -279,3 +283,61 @@ using an injected repository with no database access. PR CI runs those checks in
 the existing required `quality` job; live PostgreSQL remains a separate mandatory
 `database` job. Schema/route tests cannot prove every behavior or replace live
 tests. Always run the documented lint and HTML build before delivery.
+
+## Password recovery
+
+See [password recovery](../password-recovery.md) for lifecycle, resources, operator setup,
+concurrency, and dated evidence. Both endpoints use JSON, omit browser credentials, require
+`X-Commerce-Request: 1`, and reject a present Origin outside exact `WEB_ORIGINS` before work.
+Responses are no-store, correlated, and nosniff; there is no cookie or account identity.
+
+```http
+POST /accounts/password-recovery/request HTTP/1.1
+Host: 127.0.0.1:3001
+Content-Type: application/json
+X-Commerce-Request: 1
+Origin: http://127.0.0.1:3000
+
+{"email":"reader@example.test"}
+```
+
+Valid admitted requests return 202 with exactly
+`{"status":"accepted","message":"Password recovery request processed."}` for eligible,
+unknown, verified, unverified, and delivery-suppressed addresses, without a delivery claim.
+One challenge per account per 60 seconds, three retained live links, and 30-minute expiry
+apply. Resend or SMTP failure preserves earlier live links. Required storage failure returns
+503 even for unknown addresses. Mail shares two process slots with verification/notification,
+no queue/retry, and a five-second SMTP deadline.
+
+```http
+POST /accounts/password-recovery/confirm HTTP/1.1
+Host: 127.0.0.1:3001
+Content-Type: application/json
+X-Commerce-Request: 1
+Origin: http://127.0.0.1:3000
+
+{"token":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE","password":"Synthetic docs replacement phrase 628!"}
+```
+
+Only token and new password are accepted; no old password or session is needed. The token
+is accepted only in JSON, never an API URL or GET. Success returns 200 with exactly
+`{"status":"password_reset"}` after atomic replacement, all-session revocation, and
+invalidation of every recovery/verification link. Verification status is preserved;
+unverified accounts must request fresh verification and confirm with the replacement.
+All users explicitly sign in afterward. A bounded best-effort notification follows commit;
+mail failure does not change success. Lost responses can follow committed resets.
+
+Replacement applies the registration Unicode/NFC/byte/length/weak-password policy and fresh
+salted scrypt; contextual screening uses the bound stored email. Policy 400 has
+`error: invalid_recovery`, `message: Invalid password`, `field: password`, a supported
+password reason `code`, and requestId. Malformed shape/token returns generic 400
+`invalid_recovery`; unusable well-formed tokens and stale proof share generic 401
+`invalid_recovery` with `message: Request rejected`. Neither failure consumes a live token.
+Parser 400/413/415, Origin/header 403, rate 429, unavailable 503, and unexpected 500 retain
+the OpenAPI schemas. Each endpoint permits five parsed attempts per direct peer per minute
+and 1024 peer buckets per process. 429 has positive Retry-After; saturation 503 has
+Retry-After 1. Confirmation shares two password-work slots with the existing account flows.
+
+Session insertion rechecks the verified credential under the same account lock as reset.
+An old proof cannot create a post-reset session; a session created first is revoked even if
+its cookie arrives later. Other session expiry and sign-out contracts remain unchanged.

@@ -1,6 +1,7 @@
 # Account browser flow
 
-The web account milestone provides `/register`, `/sign-in`, and `/account`,
+The web account flow provides `/register`, `/sign-in`, `/account`, verification routes,
+and [password recovery](password-recovery.md) at `/forgot-password` and `/reset-password`,
 with registration/sign-in links from `/`. Public pages render without an API
 or database connection. `/account` initially checks the current session in the
 browser; its shell contains no private account data. The API remains responsible
@@ -114,7 +115,9 @@ distinct from a generic origin/header 403. Verification pages use the same theme
 accessibility and finite request feedback; confirmation carries its token only in
 the incoming email fragment, removes it before interaction, and uses no-referrer.
 Token/password state never persists in browser storage. Gmail SMTP enables real
-inbox delivery; password recovery and secure deployment remain launch prerequisites.
+inbox delivery. Recovery supports both account states without automatically verifying or
+signing in; it revokes old sessions, invalidates verification/recovery links, and offers
+fresh verification and explicit sign-in. Secure deployment remains a launch prerequisite.
 Profile editing, dashboards,
 marketplace features, session administration, shared abuse protection, session-row
 retention and secure public deployment are not established by this flow.

@@ -181,7 +181,12 @@ async function validateVerification(database) {
     const sibling = await issue(account);
     assert.equal(sibling.issued, true);
     assert.equal(
-      await sessions.create(randomUUID(), account.id, 'a'.repeat(64)),
+      await sessions.create(
+        randomUUID(),
+        account.id,
+        'a'.repeat(64),
+        account.passwordHash,
+      ),
       undefined,
     );
     // A controlled legacy session predates the new verified-only insertion path.
@@ -246,7 +251,14 @@ async function validateVerification(database) {
     );
     const fresh = randomUUID();
     sessionIds.add(fresh);
-    assert.ok(await sessions.create(fresh, account.id, 'c'.repeat(64)));
+    assert.ok(
+      (await sessions.create(
+        fresh,
+        account.id,
+        'c'.repeat(64),
+        account.passwordHash,
+      )) instanceof Date,
+    );
     assert.equal(await sessions.renew('c'.repeat(64)), account.id);
     // The HTTP path uses real password derivation and the actual SMTP transport.
     const other = candidate(undefined, await hashPassword(password));

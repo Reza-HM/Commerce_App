@@ -1,5 +1,62 @@
 import { apiOrigin, createAccountApi } from '../../apps/web/src/accounts/api';
 
+test('recovery uses exact responses, credential omission, policy feedback and explicit retry', async () => {
+  const send = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+  const api = createAccountApi(undefined, send);
+  send.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        status: 'accepted',
+        message: 'Password recovery request processed.',
+      }),
+      { status: 202 },
+    ),
+  );
+  expect(await api('requestRecovery', { email: 'reader@example.test' })).toEqual({
+    ok: true,
+  });
+  expect(send).toHaveBeenLastCalledWith(
+    'http://127.0.0.1:3001/accounts/password-recovery/request',
+    expect.objectContaining({
+      credentials: 'omit',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Commerce-Request': '1' },
+    }),
+  );
+  send.mockResolvedValue(
+    new Response(JSON.stringify({ status: 'password_reset' }), { status: 200 }),
+  );
+  expect(
+    await api('confirmRecovery', { token: 'synthetic', password: 'synthetic' }),
+  ).toEqual({ ok: true });
+  send.mockResolvedValue(
+    new Response(JSON.stringify({ status: 'password_reset', extra: true }), {
+      status: 200,
+    }),
+  );
+  expect(
+    await api('confirmRecovery', { token: 'synthetic', password: 'synthetic' }),
+  ).toEqual({ ok: false, code: 'unavailable' });
+  send.mockResolvedValue(
+    new Response(
+      JSON.stringify({
+        error: 'invalid_recovery',
+        message: 'Invalid password',
+        field: 'password',
+        code: 'password_blocklisted',
+      }),
+      { status: 400 },
+    ),
+  );
+  expect(
+    await api('confirmRecovery', { token: 'synthetic', password: 'synthetic' }),
+  ).toEqual({ ok: false, field: 'password', code: 'passwordWeak' });
+  send.mockResolvedValue(new Response('{}', { status: 401 }));
+  expect(
+    await api('confirmRecovery', { token: 'synthetic', password: 'synthetic' }),
+  ).toEqual({ ok: false, code: 'recoveryInvalid' });
+});
+
 test('verification uses fixed noncredentialed POST and distinguishes sign-in feedback', async () => {
   const send = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
   const api = createAccountApi(undefined, send);
